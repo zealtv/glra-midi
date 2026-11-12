@@ -1,0 +1,54 @@
+# Working notes for agents
+
+glra-osc: purpose not yet recorded (the repo had no README or code when set up on 2026-11-12).
+
+`CLAUDE.md` is a symlink to this file, so every agent runtime reads the same notes.
+
+## The primitives
+
+This repository's shape is held by the dotdirs at its root. Each is a
+self-contained, file-based protocol bundling its own script and data: the
+script operates on the directory it lives in, and the file system is the
+protocol. Each ships its own `README.md` with the full contract. Read it
+before doing anything non-trivial with that primitive.
+
+- 🪺 nestlings — `.nest/` — arrivals: what just came in, waiting to be tended.
+- 🔮 glean — `.glean/` — memory: small, current, revisable guidance.
+- 🪡 loom — `.loom/` — finite work: goals, stitches, dependencies, queue order.
+- 🐉 lore — `.lore/` — the library: complete, dated records, kept whole.
+- 🦫 groundhog — `.groundhog/` — what comes around at a set time: recurring and one-shot items. Use it, not a runtime's own cron, for scheduled wake-ups.
+
+In short: the nest holds what just arrived, glean what is true *now*, the loom
+what is still to be done, lore what happened, and groundhog what comes next.
+
+### Start here
+
+1. Read `.glean/findings/INDEX.md`, the always-loaded memory surface:
+   one line per finding. Open a body only when it is relevant
+   (`./.glean/glean.sh fetch <terms>`).
+2. Run `./.loom/loom.sh status`. The loom alone owns open work, blockers and
+   queue order. Existing stitches don't widen the user's current request.
+3. Read `.nest/tend.md` and inspect `.nest/in/` for arrivals waiting to be
+   tended. `inbox/` is a symlink to `.nest/in/`.
+4. Consult `.lore/INDEX.md` only when complete evidence or history is needed.
+   Lore is dark by default.
+
+## Memory lives in Glean
+
+Glean is this repository's only memory. Don't keep project knowledge in a
+runtime's private memory store (for example Claude Code's per-project
+`~/.claude/projects/.../memory/`), a `memory/` directory or a handoff note.
+Those drift from the repository and travel with one tool on one machine. When
+you learn something worth carrying into the next session, it becomes a
+finding: search first and revise an existing finding rather than adding a
+near-duplicate, run `./.glean/glean.sh index`, and commit it with the work that
+earned it. Claude Code's auto memory is switched off here in
+`.claude/settings.json` (`autoMemoryEnabled: false`).
+
+## Ownership
+
+One arrival may earn several routes: the source kept in lore, a constraint
+distilled into glean, a design change in `docs/`, a stitch on the loom. Those
+are different consequences of one thing, not competing copies of it. Name the
+results in a nest receipt as `lore:<id>`, `glean:<id>`, `loom:<id>` or
+`path:<repo-relative-path>`.
