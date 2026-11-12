@@ -33,6 +33,20 @@ what is still to be done, lore what happened, and groundhog what comes next.
 4. Consult `.lore/INDEX.md` only when complete evidence or history is needed.
    Lore is dark by default.
 
+## Run and test
+
+Python 3.13+ (as of 2026-11-12 Bob's only Python is `/opt/homebrew/bin/python3.14`).
+
+```sh
+/opt/homebrew/bin/python3.14 -m venv .venv
+.venv/bin/pip install -e '.[dev]'
+./test.sh              # ruff + unittest
+.venv/bin/glra-osc --version
+```
+
+`glra_osc/device/` holds code vendored from glra-studio (GPL-3.0-only); see its
+`README.md` before editing it. This repo is GPL-3.0-only as a result.
+
 ## Memory lives in Glean
 
 Glean is this repository's only memory. Don't keep project knowledge in a

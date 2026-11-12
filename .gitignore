@@ -1,3 +1,16 @@
 .groundhog/out/
 .groundhog/fired/
 .DS_Store
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.ruff_cache/
+
+# Device data is private; keep captures and logs out of git.
+dumps/
+backups/
+logs/
+*.log
