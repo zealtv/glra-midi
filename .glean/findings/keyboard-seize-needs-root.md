@@ -1,4 +1,4 @@
-# Seizing the pad's keyboard interfaces failed without root, so suppression needs another route or root
+# Seizing the pad's keyboard interfaces failed without root; a no-root hidutil remap works only for non-alphanumeric codes
 
 When trying to stop the pad typing into apps, or seeing 0xe00002c1 / "open failed" on an exclusive open.
 
@@ -28,6 +28,17 @@ found no non-root seize route. Karabiner seizes from a root process. Reports
 suggest keyboard input-report callbacks don't fire without Input Monitoring,
 and that `IOHIDCheckAccess` can misreport, so the "granted" above is weak evidence.
 Root daemons may need their own TCC grant.
+
+Hands-on tests, 2026-11-12, macOS 14.6, non-root:
+- `hidutil ... --set UserKeyMapping` **refuses the whole set** if any source
+  is alphanumeric/keypad: "Run as root to remap alphanumerics / special
+  characters with UserKeyMapping". So the stock numpad codes can't be remapped.
+- Accepted without root: F13–F24 (`0x68–0x73`), International1–9
+  (`0x87–0x8F`), LANG1–9 (`0x90–0x98`), `0x7E`, `0xE8`, consumer usages.
+  A 30-entry set of these applied to both pad services.
+- Replug wipes the per-device mapping, so it has to be reapplied on every connect.
+- Untested: whether the destination truly emits nothing, and whether the raw hidapi
+  reader still sees the original usage under the mapping.
 
 Candidate routes and the decision belong to `loom:suppression-route`;
 revise this finding with the outcome.

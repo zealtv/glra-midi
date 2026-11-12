@@ -1,0 +1,28 @@
+{"kind": "phase", "phase": "replug", "interfaces": {"DevSrvsID:4295048040": {"iface": 2, "usages": ["ff00/2"]}, "DevSrvsID:4295048036": {"iface": 0, "usages": ["1/6"]}, "DevSrvsID:4295048042": {"iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"]}}, "t": 0.0017, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048042", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 0.0094, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048040", "iface": 2, "usages": ["ff00/2"], "t": 0.0099, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048036", "iface": 0, "usages": ["1/6"], "t": 0.0153, "step": "setup"}
+{"kind": "hid_error", "path": "DevSrvsID:4295048040", "error": "read error", "iface": 2, "usages": ["ff00/2"], "t": 4.2682, "step": "unplug"}
+{"kind": "hid_error", "path": "DevSrvsID:4295048042", "error": "read error", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 4.2683, "step": "unplug"}
+{"kind": "hid_error", "path": "DevSrvsID:4295048036", "error": "read error", "iface": 0, "usages": ["1/6"], "t": 4.2683, "step": "unplug"}
+{"kind": "gone", "paths": ["DevSrvsID:4295048040", "DevSrvsID:4295048042", "DevSrvsID:4295048036"], "t": 4.5548, "step": "unplug"}
+{"kind": "unplugged", "ok": true, "t": 4.6612, "step": "unplug"}
+{"kind": "open", "path": "DevSrvsID:4295048229", "iface": 2, "usages": ["ff00/2"], "t": 9.5881, "step": "unplug"}
+{"kind": "open", "path": "DevSrvsID:4295048225", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 9.6057, "step": "unplug"}
+{"kind": "open", "path": "DevSrvsID:4295048221", "iface": 0, "usages": ["1/6"], "t": 9.6116, "step": "unplug"}
+{"kind": "replugged", "ok": true, "t": 9.732, "step": "unplug"}
+{"kind": "mapping_after_replug", "text": "RegistryID  Key                   Value\n100013c2c   UserKeyMapping   (\n        {\n        HIDKeyboardModifierMappingDst = 30064771299;\n        HIDKeyboardModifierMappingSrc = 30064771129;\n    }\n)\n100013c34   UserKeyMapping   (\n        {\n        HIDKeyboardModifierMappingDst = 30064771299;\n        HIDKeyboardModifierMappingSrc = 30064771129;\n    }\n)\n", "t": 12.75, "step": "unplug"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000560000000000", "iface": 0, "usages": ["1/6"], "t": 14.3843, "step": "after-replug-key1"}
+{"kind": "tty", "hex": "2d", "text": "-", "t": 14.3872, "step": "after-replug-key1"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000000000000000", "iface": 0, "usages": ["1/6"], "t": 14.4419, "step": "after-replug-key1"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000560000000000", "iface": 0, "usages": ["1/6"], "t": 14.5471, "step": "after-replug-key1"}
+{"kind": "tty", "hex": "2d", "text": "-", "t": 14.5506, "step": "after-replug-key1"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000000000000000", "iface": 0, "usages": ["1/6"], "t": 14.6099, "step": "after-replug-key1"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03ea00", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 19.1451, "step": "after-replug-enc1"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 19.1462, "step": "after-replug-enc1"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03ea00", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 19.2219, "step": "after-replug-enc1"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 19.2259, "step": "after-replug-enc1"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03ea00", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 19.4825, "step": "after-replug-enc1"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 19.483, "step": "after-replug-enc1"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03e200", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 20.1549, "step": "after-replug-enc1"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 20.2559, "step": "after-replug-enc1-tail"}

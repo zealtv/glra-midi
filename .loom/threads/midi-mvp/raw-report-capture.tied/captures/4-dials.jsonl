@@ -1,0 +1,10 @@
+{"kind": "phase", "phase": "dials", "interfaces": {"DevSrvsID:4295048221": {"iface": 0, "usages": ["1/6"]}, "DevSrvsID:4295048229": {"iface": 2, "usages": ["ff00/2"]}, "DevSrvsID:4295048225": {"iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"]}}, "t": 0.0021, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048221", "iface": 0, "usages": ["1/6"], "t": 0.0168, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048229", "iface": 2, "usages": ["ff00/2"], "t": 0.0174, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048225", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 0.0416, "step": "setup"}
+{"kind": "volume_before", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 3.6108, "step": "baseline-tail"}
+{"kind": "volume_after", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 9.1982, "step": "enc1-cw-tail"}
+{"kind": "volume_before", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 9.2988, "step": "enc1-cw-tail"}
+{"kind": "volume_after", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 14.94, "step": "enc1-ccw-tail"}
+{"kind": "volume_before", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 15.0606, "step": "enc1-ccw-tail"}
+{"kind": "volume_after", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 20.6748, "step": "enc1-push-tail"}

@@ -14,3 +14,13 @@ The brief's Phase 1 logger, minus the suppression (that's `silent-capture`).
 - Handles unplug/replug without crashing, and closes cleanly on Ctrl-C.
 - Decoder covered by unit tests built on the captured fixtures. Keep the
   decoder pure: bytes in, events out.
+
+## Update 2026-11-12 (orchestrator)
+The hard dependency on `unique-assignments` has been removed so the decoder can be built
+now. Report formats and real captures are in
+`../raw-report-capture.tied/findings.md` and `captures/*.jsonl`. Turn them into
+fixtures. Write a **provisional** `device/layout.json` from the stock codes
+and Bob's key numbering (findings table). Note that the three dials send identical
+codes on stock, so the provisional layout can only say "a dial". Mark
+it provisional; `unique-assignments` replaces it. Hardware checks (replug, live
+monitor) wait for Bob. `silent-capture` still depends on this stitch.

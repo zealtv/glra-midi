@@ -21,3 +21,11 @@ then:
 - Add a `glra-osc device restore <backup>` path (or document the
   glra-studio route) so Bob can put the stock layout back.
 - Have Bob press each control once to confirm the layout.
+
+## Update after raw-report-capture (2026-11-12)
+- If route 1+2 wins, take all 25 codes from the set non-root hidutil accepts
+  (see `glean:keyboard-seize-needs-root`); pick codes no app is likely to bind.
+- Bob's own numbering differs from glra-studio's slot diagram (he holds the pad
+  rotated; see the capture findings). Agree names with Bob (which dial is
+  1/2/3, which way is CW) and write `layout.json` in *his* frame.
+- Key 7 may be dead; check before assuming 16 working keys.

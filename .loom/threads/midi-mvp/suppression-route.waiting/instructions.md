@@ -35,3 +35,19 @@ sees raw reports under a mapping is untested; there's no source on consumer-page
 whichever binary opens the device.
 Decide, record the decision and evidence as a glean finding, and update
 `unique-assignments` and `silent-capture` if the choice changes them.
+
+## Update after raw-report-capture (2026-11-12)
+See `../raw-report-capture*/findings.md`. Route 1 as first written is
+**dead**: non-root hidutil refuses keypad/alphanumeric sources. It lives on
+in a combined form, **route 1+2**: program the pad with codes hidutil *will*
+remap without root (F13–F24, International1–9, LANG1–9, consumer usages; a
+30-code set was accepted), and map them all, device-matched, to a no-op.
+The pad's stock dials already send consumer codes, so that test can run
+now. **At the next Bob session (about 2 minutes):**
+1. Key 7 (Bob's row 2, column 3): run `seize.py`/`capture.py` and tap it. Dead or alive?
+2. `../raw-report-capture*/dials.sh` (20 s; restores on exit). Pass if volume and
+   mute stay put **and** `captures/4-dials.jsonl` still shows `03 ea/e9/e2` reports.
+   It tries three destinations (`0xC00000000`, `0x700000000`, `0x7000000FF`);
+   note which ones stay silent.
+If that passes, choose route 1+2 and pass the code set to `unique-assignments`.
+If the raw reader goes blind under the mapping, fall back to root seize (route 3).
