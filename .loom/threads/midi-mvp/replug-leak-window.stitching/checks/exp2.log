@@ -1,0 +1,4 @@
+22:05:43.481 waiting; current services ['100014292', '10001429e']
+22:06:13.443 pad appeared ['1000142cb', '1000142d3']
+22:06:15.460 apply -> 2 services
+22:06:25.483 restore -> None

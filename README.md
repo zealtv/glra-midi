@@ -32,6 +32,11 @@ glra-osc unsilence            # remove glra-osc's key-mapping entries from the p
   removes only its own entries. After `kill -9` the entries stay until you replug the pad
   or run `glra-osc unsilence`. If the pad can't be silenced, `run` and `monitor` refuse to
   start; `--allow-typing` starts them anyway, and the pad then types into the focused app.
+- **Known gap: the first ~3 s after a (re)plug.** For about 3 s after the pad connects, macOS
+  puts its own key mapping back whenever glra-osc sets one (observed 2026-11-12, macOS 14.6).
+  glra-osc re-checks every 100 ms and repairs it, but a key pressed in one of those short gaps
+  can still type into the focused app. Wait a few seconds after plugging the pad in before
+  playing.
 - Stop with Ctrl-C.
 
 ## Setup and tests

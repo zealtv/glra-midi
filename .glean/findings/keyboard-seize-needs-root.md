@@ -61,8 +61,17 @@ leaked), and a connect-time "original" snapshot then restored 0 entries, losing
 CapsLock. So never restore a snapshot: macOS can rewrite the mapping at any time.
 
 Revision, 2026-11-12 (replug-leak-window): a 2 s re-check still let one key (Home) type after a replug, so
-the first 10 s after each connect re-check every 100 ms (one `hidutil --get` takes about 5 ms). The real
-connect-to-overwrite delay has not been measured yet (no replug happened); Bob's replug test is pending.
+the first 10 s after each connect re-check every 100 ms (one `hidutil --get` takes about 5 ms), and `watch` rescans every 100 ms
+while the pad is absent (our first apply landed 30 ms after re-enumeration).
+
+Measured, 2026-11-12 (macOS 14.6, 20 ms poller, `loom:replug-leak-window` checks/): with no glra-osc,
+macOS applies Bob's CapsLock entry once, ~1 s after the pad appears. But for **roughly the first 3 s after
+connect, macOS reverts any mapping we set**: a single set at +2.0 s was reverted 29 ms later; in a run,
+sets at +0.03/+1.2/+2.2 s were each reverted and the one at +3.2 s stuck. Each revert leaves the pad
+typing until the next repair (65–95 ms at 100 ms ticks), and Bob's rapid presses leaked two keys.
+Delaying the first apply doesn't help (the pad types meanwhile). Bob accepted this as a documented gap
+(README "Known gap"); untried ideas: faster ticks in the first ~4 s, or adding our entries to macOS's own
+per-device modifier setting (its storage location on 14.6 isn't known: not in either global prefs plist).
 
 ## Associations
 - [[k16n3-hid-interfaces]]

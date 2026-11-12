@@ -79,3 +79,17 @@ overwrite is a reaction to our own set (the gaps from set to next overwrite run
 ~0.95–1.04 s), and where macOS 14 keeps the per-device modifier setting (not
 under `com.apple.keyboard.modifiermapping.13998-9333-0` in either global
 preferences plist, checked 2026-11-12).
+
+## Experiment and outcome (2026-11-12, ~22:05, Bob replugging)
+
+`checks/experiment-poll.log` (poller), `checks/exp2.py` / `exp2.log`:
+- Replug 1, no glra-osc: CapsLock applied once at +0.98 s, then nothing.
+- Replug 2, one apply of ours at +2.04 s (`exp2.py`): reverted to CapsLock-only 29 ms later.
+- With the 21:58 run: sets at +0.03, +1.16, +2.18 s reverted; +3.19 s stuck.
+
+So macOS reverts our mapping on every set for roughly 3 s after connect, then
+lets it stand; it isn't a single delayed overwrite. Delaying our first apply
+can't help (the pad types meanwhile). Bob chose (2026-11-12) to accept and
+document it: README "Known gap", glean `keyboard-seize-needs-root` updated.
+Untried: faster ticks in the first ~4 s; writing our entries into macOS's own
+per-device modifier setting.

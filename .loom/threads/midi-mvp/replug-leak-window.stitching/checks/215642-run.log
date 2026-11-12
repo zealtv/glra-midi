@@ -1,0 +1,13 @@
+# virtual port 'GLRA K16'
+# pad silenced (25 codes on 2 services)
+# keys interface open
+# consumer interface open
+# consumer interface lost (read error); retrying
+# keys interface lost (read error); retrying
+# waiting for the pad (36ae:2475)...
+# pad silenced (25 codes on 2 services)
+# keys interface open
+# consumer interface open
+# pad mapping reapplied (25 entries were missing)
+# pad mapping reapplied (25 entries were missing)
+# pad mapping reapplied (25 entries were missing)
