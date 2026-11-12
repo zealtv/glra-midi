@@ -8,13 +8,17 @@ from unittest import mock
 from glra_osc import monitor
 from glra_osc.decode import load_layout
 from glra_osc.silence import (
+    CHECK_SECONDS,
     CONSUMER_PAGE,
+    FAST_CHECK_SECONDS,
+    FAST_WINDOW_SECONDS,
     KEYBOARD_PAGE,
     NO_EVENT,
     Guard,
     SilenceError,
     SilenceRefused,
     Silencer,
+    check_interval,
     our_entries,
     parse_mapping,
 )
@@ -320,6 +324,154 @@ class MacosOverwriteTests(unittest.TestCase):
         self.assertEqual(len(self.fake.calls), calls)
 
 
+class FakeTime:
+    """An injectable clock for `watch`: its blocking wait advances time instead of sleeping.
+
+    `at(t, fn)` schedules `fn` to run exactly when the clock reaches `t` seconds.
+    """
+
+    def __init__(self):
+        self.now = 0.0
+        self.scheduled = []
+
+    def clock(self):
+        return self.now
+
+    def at(self, t, fn):
+        self.scheduled.append((t, fn))
+
+    def wait(self, events, timeout):
+        end = self.now + timeout
+        due = [(t, fn) for t, fn in self.scheduled if self.now <= t <= end]
+        if due:
+            t, fn = min(due, key=lambda pair: pair[0])
+            self.scheduled.remove((t, fn))
+            self.now = t
+            fn()
+        else:
+            self.now = end
+        return None
+
+    def watch(self, on_pad, on_tick, until):
+        """Run `watch` on this clock (pad always present) until `until` seconds have passed."""
+        both = {"keys": {}, "consumer": {}}
+
+        def stop():
+            raise KeyboardInterrupt
+
+        self.at(until, stop)
+        with (
+            mock.patch.object(monitor, "find_sources", lambda: both),
+            mock.patch.object(monitor, "_reader", lambda *a: None),
+            mock.patch.object(monitor, "_next_event", self.wait),
+        ):
+            monitor.watch(
+                monitor.Decoder(), lambda *a: None, lambda t: None,
+                on_pad=on_pad, on_tick=on_tick, clock=self.clock,
+            )
+
+
+class CheckCadenceTests(unittest.TestCase):
+    """Re-check every 0.1 s for 10 s after a connect, then every 2 s (loom:replug-leak-window)."""
+
+    def test_interval_is_fast_inside_the_window_and_slow_after_it(self):
+        self.assertEqual(check_interval(0.0), FAST_CHECK_SECONDS)
+        self.assertEqual(check_interval(FAST_WINDOW_SECONDS - 0.01), FAST_CHECK_SECONDS)
+        self.assertEqual(check_interval(FAST_WINDOW_SECONDS), CHECK_SECONDS)
+        self.assertEqual((FAST_CHECK_SECONDS, FAST_WINDOW_SECONDS, CHECK_SECONDS), (0.1, 10.0, 2.0))
+
+    def test_watch_ticks_fast_after_on_pad_then_slow(self):
+        ft = FakeTime()
+        ticks = []
+        ft.watch(lambda: None, lambda: ticks.append(ft.now), until=20.0)
+        gaps = [b - a for a, b in zip(ticks, ticks[1:])]
+        fast = [g for a, g in zip(ticks, gaps) if a < FAST_WINDOW_SECONDS - FAST_CHECK_SECONDS]
+        slow = [g for a, g in zip(ticks, gaps) if a >= FAST_WINDOW_SECONDS]
+        self.assertAlmostEqual(ticks[0], FAST_CHECK_SECONDS)  # first check 100 ms after connect
+        self.assertGreater(len(fast), 90)
+        for gap in fast:
+            self.assertAlmostEqual(gap, FAST_CHECK_SECONDS, places=6)
+        self.assertGreaterEqual(len(slow), 4)
+        for gap in slow:
+            self.assertAlmostEqual(gap, CHECK_SECONDS, places=6)
+        self.assertLess(len([t for t in ticks if t < FAST_WINDOW_SECONDS + 0.001]), 102)
+
+    def test_a_reconnect_restarts_the_fast_window(self):
+        ft = FakeTime()
+        both = {"keys": {}, "consumer": {}}
+        queues, pads, ticks = [], [], []
+        make = monitor.queue.Queue
+
+        def make_queue():
+            queues.append(make())
+            return queues[-1]
+
+        def wait(events, timeout):
+            ft.wait(events, timeout)
+            try:
+                return events.get_nowait()
+            except monitor.queue.Empty:
+                return None
+
+        ft.at(15.0, lambda: queues[0].put(("lost", "keys", "unplugged")))
+        ft.at(20.0, lambda: (_ for _ in ()).throw(KeyboardInterrupt))
+        with (
+            mock.patch.object(monitor.queue, "Queue", make_queue),
+            mock.patch.object(monitor, "find_sources", lambda: both),
+            mock.patch.object(monitor, "_reader", lambda *a: None),
+            mock.patch.object(monitor, "_next_event", wait),
+        ):
+            monitor.watch(
+                monitor.Decoder(), lambda *a: None, lambda t: None,
+                on_pad=lambda: pads.append(ft.now),
+                on_tick=lambda: ticks.append(ft.now), clock=ft.clock,
+            )
+        self.assertEqual(len(pads), 2)
+        self.assertGreaterEqual(pads[1], 15.0)
+        after = [t for t in ticks if t > pads[1]]
+        self.assertAlmostEqual(after[1] - after[0], FAST_CHECK_SECONDS, places=6)
+
+    def test_a_macos_overwrite_300_ms_after_connect_is_repaired_on_the_next_fast_tick(self):
+        pad = {"a1": [], "a2": []}  # macOS has not reapplied CapsLock yet at connect time
+        fake = FakeHidutil(pad)
+        ft = FakeTime()
+        silencer = make_silencer(fake)
+        said = []
+        guard = Guard(silencer, said.append)
+        repaired = []
+
+        def overwrite():
+            for rid in pad:
+                pad[rid] = [CAPSLOCK]
+
+        def tick():
+            guard.tick()
+            if ft.now >= 0.3 and not repaired and all(CAPSLOCK in e and silencer.ours[0] in e for e in pad.values()):
+                repaired.append(ft.now)
+
+        ft.at(0.3, overwrite)
+        ft.watch(guard.on_pad, tick, until=1.0)
+        self.assertEqual(len(repaired), 1)
+        self.assertLessEqual(repaired[0] - 0.3, FAST_CHECK_SECONDS + 1e-9)
+        for entries in pad.values():
+            self.assertEqual(entries, [CAPSLOCK, *silencer.ours])  # CapsLock kept, ours back
+        self.assertIn("# pad mapping reapplied (25 entries were missing)", said)
+        guard.close()
+        self.assertEqual(pad, {"a1": [CAPSLOCK], "a2": [CAPSLOCK]})
+
+    def test_one_get_per_tick_while_nothing_is_missing(self):
+        pad = {"a1": [], "a2": []}
+        fake = FakeHidutil(pad)
+        ft = FakeTime()
+        guard = Guard(make_silencer(fake), lambda t: None)
+        ticks = []
+        ft.watch(guard.on_pad, lambda: (ticks.append(1), guard.tick()), until=1.0)
+        gets = [c for c in fake.calls if "--get" in c]
+        self.assertGreaterEqual(len(ticks), 9)
+        self.assertEqual(len(fake.sets()), 1)  # only on_pad's set
+        self.assertEqual(len(gets), 2 + len(ticks))  # on_pad: get + verify; then one get per tick
+
+
 class UnsilenceTests(unittest.TestCase):
     def test_works_without_saved_state_and_keeps_other_entries(self):
         other = (0x700000065, 0x700000066)
@@ -439,7 +591,7 @@ class WatchHookTests(unittest.TestCase):
             mock.patch.object(monitor, "find_sources", lambda: both),
             mock.patch.object(monitor, "_reader", lambda *a: None),
             mock.patch.object(monitor, "RESCAN_SECONDS", 0),
-            mock.patch.object(monitor, "CHECK_SECONDS", 0),
+            mock.patch.object(monitor, "check_interval", lambda since_connect: 0),
         ):
             monitor.watch(
                 monitor.Decoder(), lambda *a: None, lambda t: None, on_pad=lambda: None,

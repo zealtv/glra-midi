@@ -45,8 +45,8 @@ Hands-on tests, 2026-11-12, macOS 14.6, non-root:
 `glra_osc/silence.py`. `glra-osc run` and `monitor` map every layout code (25) to
 `0x700000000` through `hidutil property --matching {VendorID,ProductID} --set`, merged
 with the entries already on the pad's services (Bob's CapsLock→Cmd), verified by
-re-reading. They re-apply on every (re)connect from `watch(on_pad=...)`, re-verify every 2 s
-(`on_tick`) and re-merge ours if macOS replaced the mapping, remove only our sources
+re-reading. They re-apply on every (re)connect from `watch(on_pad=...)`, re-verify every 100 ms for 10 s after each
+connect, then every 2 s (`on_tick`, `silence.check_interval`) and re-merge ours if macOS replaced the mapping, remove only our sources
 from the *current* mapping on exit/Ctrl-C/SIGTERM, and refuse to run without `--allow-typing`
 if apply or verify fails. A refusal prints the "Run as root" text to stdout with exit 1
 and applies nothing. After `kill -9` the mapping stays until replug;
@@ -59,6 +59,10 @@ Revision, 2026-11-12 (Bob's live DAW test): after a replug macOS reapplied
 CapsLock→Cmd a moment after we applied ours, replacing the whole mapping (pad keys
 leaked), and a connect-time "original" snapshot then restored 0 entries, losing
 CapsLock. So never restore a snapshot: macOS can rewrite the mapping at any time.
+
+Revision, 2026-11-12 (replug-leak-window): a 2 s re-check still let one key (Home) type after a replug, so
+the first 10 s after each connect re-check every 100 ms (one `hidutil --get` takes about 5 ms). The real
+connect-to-overwrite delay has not been measured yet (no replug happened); Bob's replug test is pending.
 
 ## Associations
 - [[k16n3-hid-interfaces]]

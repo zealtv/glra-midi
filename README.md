@@ -4,9 +4,35 @@ Host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI
 controller (OSC later). It builds on [glra-studio](https://github.com/imolitor/glra-studio)
 for device I/O.
 
-**Status:** pre-alpha skeleton. As of 2026-11-12 there is no MIDI output yet;
-`glra-osc --version` is the only command. Work is planned on the loom
-(`.loom/`, goal `midi-mvp`).
+**Status:** pre-alpha, but working. As of 2026-11-12 `glra-osc run` sends the pad's
+16 keys and 3 encoders as MIDI on a virtual port and silences the pad so it doesn't
+type into apps; Bob checked it with a DAW the same day. OSC output doesn't exist yet.
+Planned work lives on the loom (`.loom/`, goal `midi-mvp`).
+
+## Usage
+
+macOS only. Install into a virtualenv (see "Setup and tests" below; call `.venv/bin/glra-osc` or activate it), then:
+
+```sh
+glra-osc run                  # virtual MIDI port "GLRA K16", channel 1, shipped mapping
+glra-osc run --dry-run        # print the MIDI messages instead of sending them
+glra-osc run --config my.toml # use your own mapping file
+glra-osc monitor              # read-only live view of decoded control events
+glra-osc monitor --raw        # ...plus each raw report as hex
+glra-osc unsilence            # remove glra-osc's key-mapping entries from the pad
+```
+
+- **Mapping.** Without `--config`, `run` uses `glra_osc/default_mapping.toml`: keys 1-16 send
+  notes 36-51, the three encoders send relative CCs 16-18, and their pushes send notes 52-54.
+  Copy that file, edit it and pass it with `--config`; it documents every field, and a
+  typo in a key name is an error naming the key.
+- **Silencing.** While `run` or `monitor` runs, it maps the pad's codes to "no event" with
+  `hidutil`, so the pad stays quiet for the system and only glra-osc hears it. Your own
+  entries on the pad (for example a CapsLock remap) stay. On exit (Ctrl-C or SIGTERM) it
+  removes only its own entries. After `kill -9` the entries stay until you replug the pad
+  or run `glra-osc unsilence`. If the pad can't be silenced, `run` and `monitor` refuse to
+  start; `--allow-typing` starts them anyway, and the pad then types into the focused app.
+- Stop with Ctrl-C.
 
 ## Setup and tests
 

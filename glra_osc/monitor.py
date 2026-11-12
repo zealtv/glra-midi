@@ -16,7 +16,7 @@ import time
 from .decode import Decoder
 from .device.backend import enumerate_devices, open_device
 from .events import format_event, format_time
-from .silence import CHECK_SECONDS, Guard, SilenceError, Silencer, TYPING_WARNING, refusal_message
+from .silence import Guard, SilenceError, Silencer, TYPING_WARNING, check_interval, refusal_message
 
 INTERFACE_SOURCE = {0: "keys", 1: "consumer"}  # interface 2 is the silent vendor channel
 RESCAN_SECONDS = 1.0
@@ -56,7 +56,15 @@ def _reader(source, info, events, stop):
         events.put(("lost", source, "stopped"))
 
 
-def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None):
+def _next_event(events, timeout):
+    """The next queued item, or None after `timeout` seconds (the loop's only blocking wait)."""
+    try:
+        return events.get(timeout=timeout)
+    except queue.Empty:
+        return None
+
+
+def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None, clock=time.monotonic):
     """Read the pad until KeyboardInterrupt; the loop `monitor` and `run` share.
 
     `on_report(source, data, t, wall)` gets each raw report. When an interface
@@ -65,21 +73,24 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None):
     `on_pad()` runs each time the pad (re)appears with all its input interfaces
     visible, before any reader opens (silent-capture applies its key mapping
     there). If it raises, the loop ends with that exception. `on_tick()` runs
-    every CHECK_SECONDS while the pad is present (silent-capture re-verifies its
-    key mapping there); it should not raise.
+    on `silence.check_interval`'s schedule while the pad is present: every
+    FAST_CHECK_SECONDS for FAST_WINDOW_SECONDS after each `on_pad`, then every
+    CHECK_SECONDS (silent-capture re-verifies its key mapping there); it should
+    not raise. `clock` is injectable for tests.
     """
     events = queue.Queue()
     stop = threading.Event()
     threads = {}  # source -> Thread
     waiting_noted = False
     pad_present = False
+    connected_at = 0.0  # clock() when on_pad last finished
 
     try:
         next_scan = 0.0
         next_tick = 0.0
         while True:
-            if time.monotonic() >= next_scan:
-                next_scan = time.monotonic() + RESCAN_SECONDS
+            if clock() >= next_scan:
+                next_scan = clock() + RESCAN_SECONDS
                 missing = [s for s in INTERFACE_SOURCE.values() if s not in threads]
                 if missing:
                     try:
@@ -90,7 +101,8 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None):
                     if on_pad and not pad_present and set(INTERFACE_SOURCE.values()) <= set(found):
                         on_pad()
                         pad_present = True
-                        next_tick = time.monotonic() + CHECK_SECONDS
+                        connected_at = clock()
+                        next_tick = connected_at + check_interval(0.0)
                     for source in missing:
                         if source in found:
                             t = threading.Thread(
@@ -103,12 +115,18 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None):
                     if not found and not waiting_noted:
                         say("# waiting for the pad (36ae:2475)...")
                         waiting_noted = True
-            if on_tick and pad_present and time.monotonic() >= next_tick:
+            now = clock()
+            if on_tick and pad_present and now >= next_tick:
                 on_tick()
-                next_tick = time.monotonic() + CHECK_SECONDS
-            try:
-                item = events.get(timeout=0.25)
-            except queue.Empty:
+                now = clock()
+                next_tick = now + check_interval(now - connected_at)
+            # Wake for the next scan or tick, whichever comes first (a plain 0.25 s read
+            # timeout would cap the fast tick at 4 Hz).
+            due = next_scan
+            if on_tick and pad_present:
+                due = min(due, next_tick)
+            item = _next_event(events, min(0.25, max(0.0, due - now)))
+            if item is None:
                 continue
             if item[0] == "report":
                 _, source, data, t, wall = item

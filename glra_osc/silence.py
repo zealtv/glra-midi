@@ -12,7 +12,7 @@ Bob's own entries on the same services (for example CapsLock -> Cmd) are kept:
 `apply` reads the current mapping, merges ours in, sets it and reads it back.
 macOS can replace a service's whole mapping a moment after a (re)connect, for
 example when it reapplies Bob's modifier-key setting, so `ensure` (run about
-every 2 s while the pad is connected) re-merges ours into whatever is there now.
+every 100 ms for 10 s after a connect, then every 2 s) re-merges ours into whatever is there now.
 `restore` and `unsilence` remove only our sources from the current mapping; no
 snapshot from connect time is ever put back.
 
@@ -36,7 +36,17 @@ ROOT_REFUSAL = "Run as root"
 
 RETRY_SECONDS = 5.0
 RETRY_INTERVAL = 0.25
-CHECK_SECONDS = 2.0  # how often `watch` asks the Guard to re-verify the mapping
+CHECK_SECONDS = 2.0  # how often `watch` asks the Guard to re-verify the mapping, in steady state
+# macOS can overwrite the mapping a moment after a (re)connect (2026-11-12 replug: one key typed
+# inside the 2 s gap), so for FAST_WINDOW_SECONDS after each `on_pad` the check runs this often.
+# One `hidutil --get` takes about 5 ms (measured 2026-11-12), so 100 ms polling for 10 s is cheap.
+FAST_CHECK_SECONDS = 0.1
+FAST_WINDOW_SECONDS = 10.0
+
+
+def check_interval(since_connect):
+    """Seconds to wait before the next re-check, `since_connect` seconds after the last on_pad."""
+    return FAST_CHECK_SECONDS if since_connect < FAST_WINDOW_SECONDS else CHECK_SECONDS
 
 
 TYPING_WARNING = (
@@ -292,7 +302,7 @@ class Guard:
         self.say(f"# pad silenced ({len(self.silencer.ours)} codes on {count} services)")
 
     def tick(self):
-        """Re-verify the mapping (called every CHECK_SECONDS while the pad is connected).
+        """Re-verify the mapping (on `check_interval`'s schedule while the pad is connected).
 
         Failures are reported once per distinct message, never raised: a replug in
         progress makes hidutil fail briefly, and `watch` runs `on_pad` again after it.
