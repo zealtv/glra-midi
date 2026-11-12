@@ -9,8 +9,12 @@ hand on 2026-11-12, loom:suppression-route). The mapping lives on the pad's HID
 services, so a replug wipes it and `watch()` re-applies it on every connect.
 
 Bob's own entries on the same services (for example CapsLock -> Cmd) are kept:
-`apply` reads the current mapping, merges ours in, sets it and reads it back;
-`restore` sets back exactly the entries that were there before.
+`apply` reads the current mapping, merges ours in, sets it and reads it back.
+macOS can replace a service's whole mapping a moment after a (re)connect, for
+example when it reapplies Bob's modifier-key setting, so `ensure` (run about
+every 2 s while the pad is connected) re-merges ours into whatever is there now.
+`restore` and `unsilence` remove only our sources from the current mapping; no
+snapshot from connect time is ever put back.
 
 Everything that touches hidutil goes through `Hidutil.run(*args)`, so the rest
 is testable with a fake. hidutil prints "Run as root to remap alphanumerics..."
@@ -32,6 +36,7 @@ ROOT_REFUSAL = "Run as root"
 
 RETRY_SECONDS = 5.0
 RETRY_INTERVAL = 0.25
+CHECK_SECONDS = 2.0  # how often `watch` asks the Guard to re-verify the mapping
 
 
 TYPING_WARNING = (
@@ -152,7 +157,7 @@ class Silencer:
         self._retry_interval = retry_interval
         self._sleep = sleep
         self._clock = clock
-        self._original = None  # entries to put back; None until something was applied
+        self._applied = False  # True once we put our entries on the pad
 
     # -- hidutil calls -------------------------------------------------------
 
@@ -199,36 +204,49 @@ class Silencer:
         services = self._get()
         if not services:
             raise SilenceError("hidutil lists no services for the pad (36ae:2475)")
-        # Anything of ours already there (a leftover from a killed run) is not "original".
-        base = self._without_ours(_union(services))
-        self._original = base
-        wanted = base + self.ours
+        self._merge_ours(services)
+        return len(self._verify())
+
+    def _merge_ours(self, services):
+        """Set (every non-ours entry now on the pad) + ours. Returns the entries set."""
+        wanted = self._without_ours(_union(services)) + self.ours
+        self._applied = True
         self._set(wanted)
+        return wanted
+
+    def _verify(self):
+        """Re-read and check every one of our entries on every service; returns the services."""
         after = self._get()
         if not after:
             raise SilenceError("the pad's services vanished while applying")
         for rid, entries in after.items():
-            missing = [e for e in wanted if e not in entries]
+            missing = [e for e in self.ours if e not in entries]
             if missing:
                 raise SilenceError(
-                    f"service {rid}: {len(missing)} of {len(wanted)} mapping entries missing "
-                    "after the set"
+                    f"service {rid}: {len(missing)} of {len(self.ours)} of our mapping entries "
+                    "missing after the set"
                 )
-        return len(after)
+        return after
+
+    def ensure(self):
+        """Reapply ours if any service lost some; returns how many entries were missing.
+
+        Merges into whatever the services hold now, so entries macOS added since
+        (Bob's CapsLock -> Cmd, say) stay. 0 when all is well or no service is listed.
+        """
+        services = self._get()
+        missing = {e for entries in services.values() for e in self.ours if e not in entries}
+        if not missing:
+            return 0
+        self._merge_ours(services)
+        self._verify()
+        return len(missing)
 
     def restore(self):
-        """Put back exactly the entries saved by `apply`. No-op if nothing was applied."""
-        if self._original is None:
-            return
-        original, self._original = self._original, None
-        self._set(original)
-        leftover = [
-            rid
-            for rid, entries in self._get().items()
-            if any(e[0] in self.sources for e in entries)
-        ]
-        if leftover:
-            raise SilenceError(f"our entries are still on service(s) {', '.join(leftover)}")
+        """Remove our entries from the current mapping. No-op if nothing was applied."""
+        if self._applied:
+            self.unsilence()
+            self._applied = False
 
     def unsilence(self):
         """Remove only entries whose source is one of ours; needs no saved state.
@@ -237,7 +255,7 @@ class Silencer:
         """
         services = self._get()
         merged = _union(services)
-        cleaned = self._without_ours(merged)
+        cleaned = self._without_ours(merged)  # [] when the mapping is empty or ours only
         removed = len(merged) - len(cleaned)
         if removed:
             self._set(cleaned)
@@ -259,6 +277,7 @@ class Guard:
         self.say = say
         self.allow_typing = allow_typing
         self.active = False
+        self._tick_error = None
 
     def on_pad(self):
         try:
@@ -272,8 +291,27 @@ class Guard:
         self.active = True
         self.say(f"# pad silenced ({len(self.silencer.ours)} codes on {count} services)")
 
+    def tick(self):
+        """Re-verify the mapping (called every CHECK_SECONDS while the pad is connected).
+
+        Failures are reported once per distinct message, never raised: a replug in
+        progress makes hidutil fail briefly, and `watch` runs `on_pad` again after it.
+        """
+        if not self.active:
+            return
+        try:
+            missing = self.silencer.ensure()
+        except SilenceError as exc:
+            if str(exc) != self._tick_error:
+                self._tick_error = str(exc)
+                self.say(f"# WARNING: could not re-check the pad's key mapping: {exc}")
+            return
+        self._tick_error = None
+        if missing:
+            self.say(f"# pad mapping reapplied ({missing} entries were missing)")
+
     def close(self):
-        """Restore the original mapping; report (don't raise) if that fails."""
+        """Remove our entries from the pad's mapping; report (don't raise) if that fails."""
         try:
             self.silencer.restore()
         except SilenceError as exc:

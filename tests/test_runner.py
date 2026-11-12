@@ -16,7 +16,7 @@ ALL_UP = bytes(8)
 def run_with(script, **kwargs):
     """Run `runner.run` in dry-run mode with `watch` replaced by `script(on_report, on_lost)`."""
 
-    def fake_watch(decoder, on_report, say, on_lost=None, on_pad=None):
+    def fake_watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None):
         script(on_report, on_lost)
 
     out, err = io.StringIO(), io.StringIO()
@@ -51,7 +51,7 @@ class RunnerTests(unittest.TestCase):
         fake = FakeHidutil(pad)
         seen = []
 
-        def fake_watch(decoder, on_report, say, on_lost=None, on_pad=None):
+        def fake_watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None):
             on_pad()
             seen.append([len(v) for v in pad.values()])
 
@@ -68,7 +68,7 @@ class RunnerTests(unittest.TestCase):
         fake = FakeHidutil({"a1": []})
         fake.root_only = True
 
-        def fake_watch(decoder, on_report, say, on_lost=None, on_pad=None):
+        def fake_watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None):
             on_pad()
 
         out, err = io.StringIO(), io.StringIO()
@@ -82,7 +82,7 @@ class RunnerTests(unittest.TestCase):
         fake = FakeHidutil({"a1": []})
         fake.root_only = True
 
-        def fake_watch(decoder, on_report, say, on_lost=None, on_pad=None):
+        def fake_watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None):
             on_pad()
             on_report("keys", KEY1_DOWN, 0.0, 0.0)
 
@@ -115,7 +115,7 @@ class RunnerTests(unittest.TestCase):
 
         out = io.StringIO()
         with mock.patch.object(
-            runner, "watch", lambda d, r, s, on_lost=None, on_pad=None: script(r, on_lost)
+            runner, "watch", lambda d, r, s, on_lost=None, on_pad=None, on_tick=None: script(r, on_lost)
         ):
             with self.assertRaises(RuntimeError):
                 runner.run(dry_run=True, out=out, err=io.StringIO())

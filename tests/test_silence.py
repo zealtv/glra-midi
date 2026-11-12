@@ -237,6 +237,89 @@ class ApplyRestoreTests(unittest.TestCase):
             self.s.restore()
 
 
+class MacosOverwriteTests(unittest.TestCase):
+    """2026-11-12 replug: macOS reapplied Bob's CapsLock->Cmd, replacing the whole mapping."""
+
+    def setUp(self):
+        self.pad = {"a1": [], "a2": []}  # connect time: the CapsLock entry not applied yet
+        self.fake = FakeHidutil(self.pad)
+        self.s = make_silencer(self.fake)
+        self.s.apply()
+
+    def macos_overwrites(self):
+        for rid in self.pad:
+            self.pad[rid] = [CAPSLOCK]
+
+    def test_next_check_reapplies_ours_and_keeps_capslock(self):
+        self.macos_overwrites()
+        self.assertEqual(self.s.ensure(), 25)
+        for entries in self.pad.values():
+            self.assertEqual(entries, [CAPSLOCK, *self.s.ours])
+
+    def test_exit_after_that_leaves_exactly_capslock(self):
+        self.macos_overwrites()
+        self.s.ensure()
+        self.s.restore()  # a connect-time snapshot would have put back [] here
+        self.assertEqual(self.pad, {"a1": [CAPSLOCK], "a2": [CAPSLOCK]})
+
+    def test_exit_straight_after_an_overwrite_also_leaves_capslock(self):
+        self.macos_overwrites()
+        self.s.restore()
+        self.assertEqual(self.pad, {"a1": [CAPSLOCK], "a2": [CAPSLOCK]})
+
+    def test_exit_with_ours_only_sets_an_empty_list(self):
+        self.s.restore()
+        self.assertEqual(self.pad, {"a1": [], "a2": []})
+        self.assertEqual(json.loads(self.fake.sets()[-1][-1]), {"UserKeyMapping": []})
+
+    def test_check_does_nothing_while_all_entries_are_present(self):
+        before = len(self.fake.sets())
+        self.assertEqual(self.s.ensure(), 0)
+        self.assertEqual(len(self.fake.sets()), before)
+
+    def test_one_service_losing_entries_is_enough(self):
+        self.pad["a2"] = [CAPSLOCK, *self.s.ours[:20]]
+        self.assertEqual(self.s.ensure(), 5)
+        self.assertEqual(self.pad["a1"], self.pad["a2"])
+        self.assertEqual(self.pad["a2"], [CAPSLOCK, *self.s.ours])
+
+    def test_check_with_no_services_does_nothing(self):
+        self.pad.clear()
+        self.assertEqual(self.s.ensure(), 0)
+
+    def test_guard_logs_one_line_and_exit_leaves_capslock(self):
+        said = []
+        guard = Guard(self.s, said.append)
+        guard.on_pad()
+        guard.tick()
+        self.assertEqual(said[-1].split()[1], "pad")  # nothing new from a clean check
+        count = len(said)
+        self.macos_overwrites()
+        guard.tick()
+        self.assertEqual(said[count:], ["# pad mapping reapplied (25 entries were missing)"])
+        guard.tick()
+        self.assertEqual(len(said), count + 1)
+        guard.close()
+        self.assertEqual(self.pad, {"a1": [CAPSLOCK], "a2": [CAPSLOCK]})
+
+    def test_guard_reports_a_failed_check_once_and_does_not_raise(self):
+        said = []
+        guard = Guard(self.s, said.append)
+        guard.on_pad()
+        self.macos_overwrites()
+        self.fake.fail_sets = 2
+        guard.tick()
+        guard.tick()
+        warnings = [line for line in said if "re-check" in line]
+        self.assertEqual(len(warnings), 1)
+
+    def test_guard_does_not_check_when_it_is_not_silencing(self):
+        guard = Guard(self.s, lambda t: None)
+        calls = len(self.fake.calls)
+        guard.tick()
+        self.assertEqual(len(self.fake.calls), calls)
+
+
 class UnsilenceTests(unittest.TestCase):
     def test_works_without_saved_state_and_keeps_other_entries(self):
         other = (0x700000065, 0x700000066)
@@ -342,6 +425,27 @@ class WatchHookTests(unittest.TestCase):
 
         self.run_watch([False, False, True], on_pad, lost_after_open=False)
         self.assertEqual(len(calls), 1)
+
+    def test_on_tick_runs_on_a_timer_while_the_pad_is_present(self):
+        ticks = []
+
+        def on_tick():
+            ticks.append(1)
+            if len(ticks) == 3:
+                raise KeyboardInterrupt
+
+        both = {"keys": {}, "consumer": {}}
+        with (
+            mock.patch.object(monitor, "find_sources", lambda: both),
+            mock.patch.object(monitor, "_reader", lambda *a: None),
+            mock.patch.object(monitor, "RESCAN_SECONDS", 0),
+            mock.patch.object(monitor, "CHECK_SECONDS", 0),
+        ):
+            monitor.watch(
+                monitor.Decoder(), lambda *a: None, lambda t: None, on_pad=lambda: None,
+                on_tick=on_tick,
+            )
+        self.assertEqual(len(ticks), 3)
 
     def test_an_exception_from_the_hook_ends_the_loop(self):
         def on_pad():

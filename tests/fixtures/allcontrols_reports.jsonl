@@ -1,8 +1,8 @@
 {"run":"allcontrols","step":"key1","source":"keys","hex":"0000680000000000","t":2.7667}
 {"run":"allcontrols","step":"key1","source":"keys","hex":"0000000000000000","t":2.8474}
-{"run":"allcontrols","step":"key2","source":"keys","hex":"0000690000000000","t":5.2015}
+{"run":"allcontrols","step":"key2","source":"keys","hex":"00004a0000000000","t":5.2015}
 {"run":"allcontrols","step":"key2","source":"keys","hex":"0000000000000000","t":5.2862}
-{"run":"allcontrols","step":"key3","source":"keys","hex":"00006a0000000000","t":7.7313}
+{"run":"allcontrols","step":"key3","source":"keys","hex":"00004b0000000000","t":7.7313}
 {"run":"allcontrols","step":"key3","source":"keys","hex":"0000000000000000","t":7.8231}
 {"run":"allcontrols","step":"key4","source":"keys","hex":"00006b0000000000","t":10.5145}
 {"run":"allcontrols","step":"key4","source":"keys","hex":"0000000000000000","t":10.6233}
@@ -22,9 +22,9 @@
 {"run":"allcontrols","step":"key11","source":"keys","hex":"0000000000000000","t":31.3312}
 {"run":"allcontrols","step":"key12","source":"keys","hex":"0000730000000000","t":34.1972}
 {"run":"allcontrols","step":"key12","source":"keys","hex":"0000000000000000","t":34.295}
-{"run":"allcontrols","step":"key13","source":"keys","hex":"0000460000000000","t":37.2022}
+{"run":"allcontrols","step":"key13","source":"keys","hex":"00004d0000000000","t":37.2022}
 {"run":"allcontrols","step":"key13","source":"keys","hex":"0000000000000000","t":37.2931}
-{"run":"allcontrols","step":"key14","source":"keys","hex":"0000470000000000","t":40.2462}
+{"run":"allcontrols","step":"key14","source":"keys","hex":"00004e0000000000","t":40.2462}
 {"run":"allcontrols","step":"key14","source":"keys","hex":"0000000000000000","t":40.3152}
 {"run":"allcontrols","step":"key15","source":"keys","hex":"0000480000000000","t":43.2364}
 {"run":"allcontrols","step":"key15","source":"keys","hex":"0000000000000000","t":43.3139}

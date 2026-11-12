@@ -16,7 +16,7 @@ import time
 from .decode import Decoder
 from .device.backend import enumerate_devices, open_device
 from .events import format_event, format_time
-from .silence import Guard, SilenceError, Silencer, TYPING_WARNING, refusal_message
+from .silence import CHECK_SECONDS, Guard, SilenceError, Silencer, TYPING_WARNING, refusal_message
 
 INTERFACE_SOURCE = {0: "keys", 1: "consumer"}  # interface 2 is the silent vendor channel
 RESCAN_SECONDS = 1.0
@@ -56,7 +56,7 @@ def _reader(source, info, events, stop):
         events.put(("lost", source, "stopped"))
 
 
-def watch(decoder, on_report, say, on_lost=None, on_pad=None):
+def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None):
     """Read the pad until KeyboardInterrupt; the loop `monitor` and `run` share.
 
     `on_report(source, data, t, wall)` gets each raw report. When an interface
@@ -64,7 +64,9 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None):
     notes) before the rescan reopens it. `say(text)` prints status lines.
     `on_pad()` runs each time the pad (re)appears with all its input interfaces
     visible, before any reader opens (silent-capture applies its key mapping
-    there). If it raises, the loop ends with that exception.
+    there). If it raises, the loop ends with that exception. `on_tick()` runs
+    every CHECK_SECONDS while the pad is present (silent-capture re-verifies its
+    key mapping there); it should not raise.
     """
     events = queue.Queue()
     stop = threading.Event()
@@ -74,6 +76,7 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None):
 
     try:
         next_scan = 0.0
+        next_tick = 0.0
         while True:
             if time.monotonic() >= next_scan:
                 next_scan = time.monotonic() + RESCAN_SECONDS
@@ -87,6 +90,7 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None):
                     if on_pad and not pad_present and set(INTERFACE_SOURCE.values()) <= set(found):
                         on_pad()
                         pad_present = True
+                        next_tick = time.monotonic() + CHECK_SECONDS
                     for source in missing:
                         if source in found:
                             t = threading.Thread(
@@ -99,6 +103,9 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None):
                     if not found and not waiting_noted:
                         say("# waiting for the pad (36ae:2475)...")
                         waiting_noted = True
+            if on_tick and pad_present and time.monotonic() >= next_tick:
+                on_tick()
+                next_tick = time.monotonic() + CHECK_SECONDS
             try:
                 item = events.get(timeout=0.25)
             except queue.Empty:
@@ -149,7 +156,7 @@ def run(raw=False, out=None, err=None, allow_typing=False, silencer=None):
         print(TYPING_WARNING, file=err, flush=True)
     previous = signal.signal(signal.SIGTERM, _terminate)
     try:
-        watch(decoder, on_report, say, on_pad=guard.on_pad)
+        watch(decoder, on_report, say, on_pad=guard.on_pad, on_tick=guard.tick)
     except SilenceError as exc:
         print(refusal_message(exc), file=err, flush=True)
         return 1

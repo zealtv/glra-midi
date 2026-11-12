@@ -45,14 +45,20 @@ Hands-on tests, 2026-11-12, macOS 14.6, non-root:
 `glra_osc/silence.py`. `glra-osc run` and `monitor` map every layout code (25) to
 `0x700000000` through `hidutil property --matching {VendorID,ProductID} --set`, merged
 with the entries already on the pad's services (Bob's CapsLock→Cmd), verified by
-re-reading. They re-apply on every (re)connect from `watch(on_pad=...)`, restore the
-saved original on exit/Ctrl-C/SIGTERM, and refuse to run without `--allow-typing`
+re-reading. They re-apply on every (re)connect from `watch(on_pad=...)`, re-verify every 2 s
+(`on_tick`) and re-merge ours if macOS replaced the mapping, remove only our sources
+from the *current* mapping on exit/Ctrl-C/SIGTERM, and refuse to run without `--allow-typing`
 if apply or verify fails. A refusal prints the "Run as root" text to stdout with exit 1
 and applies nothing. After `kill -9` the mapping stays until replug;
 `glra-osc unsilence` removes entries whose source is ours, and a later run treats
 such leftovers as "not original". With no mapping, `--get` prints each service
 with an empty `( )`; with no matching service it prints nothing. The raw hidapi
 readers still see the original reports under the mapping.
+
+Revision, 2026-11-12 (Bob's live DAW test): after a replug macOS reapplied
+CapsLock→Cmd a moment after we applied ours, replacing the whole mapping (pad keys
+leaked), and a connect-time "original" snapshot then restored 0 entries, losing
+CapsLock. So never restore a snapshot: macOS can rewrite the mapping at any time.
 
 ## Associations
 - [[k16n3-hid-interfaces]]

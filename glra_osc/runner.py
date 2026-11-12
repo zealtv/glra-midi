@@ -85,6 +85,7 @@ def run(config=None, dry_run=False, out=None, err=None, allow_typing=False, sile
             say,
             on_lost=lambda: send_all(engine.release_all()),
             on_pad=guard.on_pad,
+            on_tick=guard.tick,
         )
     except SilenceError as exc:
         print(refusal_message(exc), file=err, flush=True)

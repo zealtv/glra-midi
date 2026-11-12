@@ -12,7 +12,11 @@ from glra_osc.monitor import render
 FIXTURES = Path(__file__).parent / "fixtures"
 FIXTURE = FIXTURES / "captured_reports.jsonl"  # 2026-11-12, stock assignments
 STOCK_LAYOUT = FIXTURES / "stock_layout.json"  # the layout the pad had before reprogramming
-ALLCONTROLS = FIXTURES / "allcontrols_reports.jsonl"  # 2026-11-12, final programmed layout
+# 2026-11-12, final programmed layout. Hand-edited after capture: keys 2, 3, 13, 14 were
+# captured as 0x69/0x6a/0x46/0x47 and rewritten to 0x4a/0x4b/0x4d/0x4e, because Bob
+# reprogrammed those four keys the same day (macOS turned the old codes into brightness
+# keys). Only the key codes changed; timestamps are the originals.
+ALLCONTROLS = FIXTURES / "allcontrols_reports.jsonl"
 
 
 def stock_decoder():

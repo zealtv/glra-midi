@@ -10,9 +10,9 @@ Code is in `glra_osc/silence.py`; the pieces:
   `layout.json`), sets, re-reads, and checks every wanted entry on every service.
   It retries for 5 s when no services are listed yet or the verify fails.
   "Run as root" in the output, or a non-zero exit, is a failure (the root text fails at once).
-- `Silencer.restore()` sets back exactly the saved original entries; `Silencer.unsilence()`
-  (CLI `glra-osc unsilence`) removes entries by source, needs no saved state, and sets
-  nothing when the pad is clean or absent.
+- `Silencer.restore()` and `Silencer.unsilence()` (CLI `glra-osc unsilence`) remove entries
+  by source from the current mapping (see Revision), need no saved state, and set nothing
+  when the pad is clean or absent.
 - `monitor.watch(on_pad=...)` calls the hook each time the pad appears with both input
   interfaces enumerated, before any reader opens, and again after any interface was lost.
 - `run` and `monitor` (both take `--allow-typing`) refuse with a reason and exit 1 when
@@ -32,6 +32,26 @@ Checked on the live pad (macOS 14.6, non-root, 2026-11-12, no keys pressed):
 - Not run: a SIGINT from a real terminal (my background-job `kill -INT` was ignored by
   the shell; it shares the SIGTERM path), a replug, and any key press under the mapping.
 
+## Revision (2026-11-12, after Bob's live DAW test with a replug)
+Two bugs: after a replug macOS applied Bob's CapsLock→Cmd a moment after our mapping and
+*replaced* the pad's whole `UserKeyMapping`, so pad keys leaked (key 16 typed `ESC[2~`,
+others changed brightness); and the connect-time "original" snapshot, read before that
+reapplication, was restored on exit, leaving 0 entries (CapsLock→Cmd lost).
+- `Silencer.ensure()` re-reads the mapping; if any service lacks any of our 25 entries it
+  merges ours into what is there now (every non-ours entry kept) and verifies. `watch` has a
+  new `on_tick` hook (every `CHECK_SECONDS` = 2 s, a timer in the existing loop) that calls
+  `Guard.tick()`, which logs `# pad mapping reapplied (n entries were missing)`. A failing
+  check logs one warning per distinct message and never raises.
+- `restore()` and `unsilence()` now both remove only our sources from the current mapping
+  (empty list if nothing else remains); no snapshot is kept (`_original` is gone).
+- Checked live 2026-11-12: `run --dry-run`, then the pad set to just CapsLock via hidutil →
+  52 `Src` lines again within 3.5 s, and SIGTERM left exactly CapsLock on both services.
+- Tests: `MacosOverwriteTests` and a `watch` tick test in `tests/test_silence.py`.
+- Same day, `layout.json` moved keys 2, 3, 13, 14 to 0x4a/0x4b/0x4d/0x4e; the replay fixture
+  `allcontrols_reports.jsonl` had those four codes rewritten by hand.
+- Limit: there is still a window of up to ~2 s after a macOS overwrite where pad keys leak;
+  the first `on_pad` apply can also be overwritten before the next tick.
+
 ## Still needs Bob's hands-on check (the stitch's own checklist)
 - Replug the pad while `glra-osc run` runs: expect "# pad silenced" again, pad silent.
 - Press keys and turn/push dials with the mapping on: nothing typed in TextEdit, Finder,
@@ -45,7 +65,7 @@ Checked on the live pad (macOS 14.6, non-root, 2026-11-12, no keys pressed):
   by hand; covered by unit tests only).
 
 ## Known limits
-- Services with different mappings are merged as a union and restored to that union
+- Services with different mappings are merged as a union and written back as that union
   (the pad's two services carried identical ones on 2026-11-12).
 - Verify covers the services hidutil lists at that moment; `watch` only calls the hook
   once both input interfaces are enumerated, to avoid a half-covered pad.
