@@ -1,0 +1,8 @@
+{"kind": "phase", "phase": "trial", "interfaces": {"DevSrvsID:4295048225": {"iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"]}, "DevSrvsID:4295048221": {"iface": 0, "usages": ["1/6"]}, "DevSrvsID:4295048229": {"iface": 2, "usages": ["ff00/2"]}}, "t": 0.0023, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048221", "iface": 0, "usages": ["1/6"], "t": 0.0247, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048225", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 0.0306, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048229", "iface": 2, "usages": ["ff00/2"], "t": 0.0311, "step": "setup"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000680000000000", "iface": 0, "usages": ["1/6"], "t": 2.5436, "step": "key1"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000000000000000", "iface": 0, "usages": ["1/6"], "t": 2.6165, "step": "key1"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000680000000000", "iface": 0, "usages": ["1/6"], "t": 2.8305, "step": "key1"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000000000000000", "iface": 0, "usages": ["1/6"], "t": 2.9014, "step": "key1"}

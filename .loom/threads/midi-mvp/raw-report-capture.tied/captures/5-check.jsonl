@@ -1,0 +1,77 @@
+{"kind": "phase", "phase": "dials", "interfaces": {"DevSrvsID:4295048229": {"iface": 2, "usages": ["ff00/2"]}, "DevSrvsID:4295048225": {"iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"]}, "DevSrvsID:4295048221": {"iface": 0, "usages": ["1/6"]}}, "t": 0.002, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048229", "iface": 2, "usages": ["ff00/2"], "t": 0.0034, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048225", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 0.0129, "step": "setup"}
+{"kind": "open", "path": "DevSrvsID:4295048221", "iface": 0, "usages": ["1/6"], "t": 0.0182, "step": "setup"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "00005b0000000000", "iface": 0, "usages": ["1/6"], "t": 5.3029, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 5.3065, "step": "key7"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000000000000000", "iface": 0, "usages": ["1/6"], "t": 5.3977, "step": "key7"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "00005b0000000000", "iface": 0, "usages": ["1/6"], "t": 5.5356, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 5.5453, "step": "key7"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000000000000000", "iface": 0, "usages": ["1/6"], "t": 5.6076, "step": "key7"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "00005b0000000000", "iface": 0, "usages": ["1/6"], "t": 6.0117, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.0154, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.2667, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.2994, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.3341, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.3676, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.4009, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.4339, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.4679, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.5065, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.5356, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.5693, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.6057, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.6353, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.6719, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.7049, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.7385, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.773, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.8057, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.8396, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.8736, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.9077, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.9419, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 6.9753, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.0088, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.0417, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.0757, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.1087, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.1422, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.1757, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.2096, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.2439, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.2783, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.3116, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.3457, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.3798, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.413, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.4477, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.4812, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.5153, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.5492, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.5832, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.6168, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.6512, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.6865, "step": "key7"}
+{"kind": "tty", "hex": "33", "text": "3", "t": 7.7188, "step": "key7"}
+{"kind": "hid", "path": "DevSrvsID:4295048221", "hex": "0000000000000000", "iface": 0, "usages": ["1/6"], "t": 7.7205, "step": "key7"}
+{"kind": "volume_before", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 9.1035, "step": "key7-tail"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03ea00", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 11.733, "step": "enc1-cw"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 11.7335, "step": "enc1-cw"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03ea00", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 12.0647, "step": "enc1-cw"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 12.0654, "step": "enc1-cw"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03ea00", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 13.1775, "step": "enc1-cw"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 13.1784, "step": "enc1-cw"}
+{"kind": "volume_after", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 14.6996, "step": "enc1-cw-tail"}
+{"kind": "volume_before", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 14.8072, "step": "enc1-cw-tail"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03e900", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 16.9557, "step": "enc1-ccw"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 16.9563, "step": "enc1-ccw"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03e900", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 17.4375, "step": "enc1-ccw"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 17.4379, "step": "enc1-ccw"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03e900", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 18.0997, "step": "enc1-ccw"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 18.1004, "step": "enc1-ccw"}
+{"kind": "volume_after", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 20.4016, "step": "enc1-ccw-tail"}
+{"kind": "volume_before", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 20.509, "step": "enc1-ccw-tail"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "03e200", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 22.2858, "step": "enc1-push"}
+{"kind": "hid", "path": "DevSrvsID:4295048225", "hex": "030000", "iface": 1, "usages": ["1/6", "1/2", "1/1", "c/1", "1/80", "1/c"], "t": 22.4147, "step": "enc1-push"}
+{"kind": "volume_after", "value": "output volume:94, input volume:71, alert volume:100, output muted:false", "t": 26.147, "step": "enc1-push-tail"}

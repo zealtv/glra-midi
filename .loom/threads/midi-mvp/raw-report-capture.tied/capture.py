@@ -68,9 +68,20 @@ def steps(phase):
             yield f"enc{i}-push", f"{d} dial: press once.", 3
     elif phase == "dials":
         yield "baseline", "Hands off the pad.", 2
+        yield "key7", "KEY 7 (row 2, column 3): tap twice, then hold ~1 s.", 5
         yield "enc1-cw", "UPPER dial: turn RIGHT 3 clicks, slowly.", 5
         yield "enc1-ccw", "UPPER dial: turn LEFT 3 clicks, slowly.", 5
         yield "enc1-push", "UPPER dial: press once.", 5
+    elif phase == "trial":
+        yield "key1", "KEY 1 (top-left, row 1 column 1): tap twice.", 5
+    elif phase == "allcontrols":
+        for k in range(1, 17):
+            yield f"key{k}", f"{key_name(k)}: tap once.", 2.5
+        for i in range(1, 4):
+            d = ["LEFT", "MIDDLE", "RIGHT"][i - 1]
+            yield f"enc{i}-cw", f"{d} dial (dial {i}): turn CLOCKWISE 2 clicks.", 3.5
+            yield f"enc{i}-ccw", f"{d} dial (dial {i}): turn ANTICLOCKWISE 2 clicks.", 3.5
+            yield f"enc{i}-push", f"{d} dial (dial {i}): press once.", 3
     elif phase == "replug":
         yield "after-replug-key1", "KEY 1: tap twice.", 3
         yield "after-replug-enc1", "UPPER dial: turn RIGHT 2 clicks, then press once.", 4
