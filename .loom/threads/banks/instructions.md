@@ -5,3 +5,6 @@ Sketch only. Split when picked up.
 Several mappings switchable from a control, MIDI or OSC. Each bank keeps its
 own encoder and toggle state, and switching banks sends nothing by default.
 Brief §6.
+
+Lighting (2026-11-12): bank indication uses `rgb-feedback` (`led-animator` API:
+base colours plus a bank-change splash). Only that part depends on it.
