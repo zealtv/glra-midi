@@ -49,3 +49,15 @@
 - Even at 100 ms a key pressed in the first ~100 ms after connect, before our first apply
   finishes, can still type; the window is smaller, not zero.
 - `glean:keyboard-seize-needs-root` revised (fast re-check window; race timing still unmeasured).
+
+## Review follow-up (orchestrator, 2026-11-12)
+
+A second leak window sat before the macOS overwrite: a replugged pad has no
+mapping until `on_pad` runs, and `watch` only rescanned every 1 s, so after a
+loss the reconnect could take up to ~0.95 s. `watch` now rescans every 0.1 s
+(`FAST_RESCAN_SECONDS`) while the pad is absent and pulls the next scan forward
+on a loss; an enumeration took ~1.6 ms median over 30 runs (measured 2026-11-12).
+Repeated `enumerate failed` messages are reported once per distinct error.
+`test_a_reconnect_restarts_the_fast_window` now asserts reconnect within 0.1 s
+(it fails at 0.95 s without the change). Live dry-run self-check after the change: 26
+entries per service while running, CapsLock only after SIGTERM.

@@ -20,6 +20,9 @@ from .silence import Guard, SilenceError, Silencer, TYPING_WARNING, check_interv
 
 INTERFACE_SOURCE = {0: "keys", 1: "consumer"}  # interface 2 is the silent vendor channel
 RESCAN_SECONDS = 1.0
+# While the pad is absent, scan this often: a replugged pad has no key mapping until `on_pad`
+# runs, so a slow scan is itself a leak window. One enumeration took ~1.6 ms (2026-11-12).
+FAST_RESCAN_SECONDS = 0.1
 
 
 def find_sources():
@@ -84,20 +87,25 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None, cloc
     waiting_noted = False
     pad_present = False
     connected_at = 0.0  # clock() when on_pad last finished
+    scan_error = None  # last enumerate failure reported
 
     try:
         next_scan = 0.0
         next_tick = 0.0
         while True:
             if clock() >= next_scan:
-                next_scan = clock() + RESCAN_SECONDS
+                next_scan = clock() + (RESCAN_SECONDS if pad_present else FAST_RESCAN_SECONDS)
                 missing = [s for s in INTERFACE_SOURCE.values() if s not in threads]
                 if missing:
                     try:
                         found = find_sources()
                     except Exception as exc:  # hidapi enumeration trouble: retry next scan
                         found = {}
-                        say(f"# enumerate failed: {exc}")
+                        if str(exc) != scan_error:  # fast rescans would repeat it 10x a second
+                            say(f"# enumerate failed: {exc}")
+                        scan_error = str(exc)
+                    else:
+                        scan_error = None
                     if on_pad and not pad_present and set(INTERFACE_SOURCE.values()) <= set(found):
                         on_pad()
                         pad_present = True
@@ -138,6 +146,7 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None, cloc
                 _, source, why = item
                 threads.pop(source, None)
                 pad_present = False  # re-run on_pad when the pad is back
+                next_scan = min(next_scan, clock() + FAST_RESCAN_SECONDS)  # don't wait out a slow scan
                 decoder.reset()
                 if on_lost:
                     on_lost()

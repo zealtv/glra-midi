@@ -413,7 +413,7 @@ class CheckCadenceTests(unittest.TestCase):
             except monitor.queue.Empty:
                 return None
 
-        ft.at(15.0, lambda: queues[0].put(("lost", "keys", "unplugged")))
+        ft.at(15.15, lambda: queues[0].put(("lost", "keys", "unplugged")))  # just after a scan on the 1 s grid (0.1, 1.1, ...)
         ft.at(20.0, lambda: (_ for _ in ()).throw(KeyboardInterrupt))
         with (
             mock.patch.object(monitor.queue, "Queue", make_queue),
@@ -427,7 +427,9 @@ class CheckCadenceTests(unittest.TestCase):
                 on_tick=lambda: ticks.append(ft.now), clock=ft.clock,
             )
         self.assertEqual(len(pads), 2)
-        self.assertGreaterEqual(pads[1], 15.0)
+        self.assertGreaterEqual(pads[1], 15.15)
+        # the pad is unmapped until on_pad runs, so it is found again within a fast rescan
+        self.assertLessEqual(pads[1] - 15.15, 0.1 + 1e-9)
         after = [t for t in ticks if t > pads[1]]
         self.assertAlmostEqual(after[1] - after[0], FAST_CHECK_SECONDS, places=6)
 
