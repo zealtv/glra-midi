@@ -1,0 +1,20 @@
+# Delegate stitches to interactive workers in the tmux panes, following qtable's process
+
+When dispatching a stitch to a worker agent: run it as an interactive session in a tmux pane Bob can watch, not headless `claude -p`, and follow qtable's established worker process.
+
+## Why
+Bob, 2026-11-12, starting `rgb-feedback/led-research`: "when you delegate i'd like you to run interactive sessions in the tmux panes so i get some visibility as to what's going (qtable process)". qtable is the peer repo `../qtable` whose manager/worker process is recorded in its glean findings. Until that point this repo's workers ran as `claude -p … | tee log` in the panes, and Bob couldn't follow them.
+
+## How
+The source of truth is qtable's `.glean/findings/one-worktree-one-cache-one-pane.md` (and, for usage, `pace-agent-usage-to-the-window-reset.md`); read it before dispatching. In short, as applied here:
+- Claim (and queue) the stitch on main when dispatching. The worker doesn't touch loom state.
+- Prefer a worktree per worker (`git worktree add ../glra-osc-<stitch> -b <stitch> main`), with the pane started in it (`tmux respawn-pane -k -t <pane> -c <worktree>`). Each worktree needs its own `.venv`. Hardware stitches share one pad: never run two pad-touching workers at once.
+- Launch: `claude --model sonnet --allowedTools … -- "Read and follow the brief in <file>"`. Write the brief to a file and point to it, so the brief arrives whole. For mid-run notes, send the text, then Enter separately, then check the input line is empty.
+- Watch the visible screen, not scrollback: approval prompts ("Do you want to proceed"), a done marker (the worker touches a file, since a `WORKER DONE` line in the pasted brief matches itself), and an unchanged screen over ~10 min. In this session (2026-11-12) that watcher was a small polling script on the pane run under Monitor.
+- Usage: read `~/repos/ai-kit/tools/claude-usage`; ask Bob for this session's floors. qtable's are per-run, not standing.
+
+## Triggers
+claude -p, tmux pane, worker pane, delegate, dispatch, qtable process, interactive session
+
+## Associations
+- [[brief-is-direction]]

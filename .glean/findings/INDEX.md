@@ -1,6 +1,7 @@
 <!-- auto-generated; run glean.sh index to refresh -->
 
 - [[brief-is-direction]] — The brief points a direction; Bob wants a basic working MIDI tool first — When planning or scoping work here, or when tempted to follow the initial brief to the letter: Bob's stated priorities as of 2026-11-12 override it.
+- [[delegate-in-visible-tmux-panes]] — Delegate stitches to interactive workers in the tmux panes, following qtable's process — When dispatching a stitch to a worker agent: run it as an interactive session in a tmux pane Bob can watch, not headless `claude -p`, and follow qtable's established worker process.
 - [[glra-studio-reuse]] — glra-studio is the peer repo for device I/O; reusing it makes this project GPL-3.0 — When touching device detection, assignment reads/writes or lighting, or choosing licence/dependencies: start from `../glra-studio/macropad/` rather than reinventing the protocol.
 - [[k16n3-hid-interfaces]] — The K16_N3 shows three HID interfaces; Bob's pad runs firmware 103 and now sends 25 unique codes — When decoding pad input, picking which interface to open, or reasoning about which control was pressed.
 - [[keyboard-seize-needs-root]] — The pad is silenced without root by a per-device hidutil mapping to "no event"; seizing needs root and isn't used — When trying to stop the pad typing into apps, editing `glra_osc/silence.py`, or seeing 0xe00002c1 / "open failed" on an exclusive open, or "Run as root to remap alphanumerics".
