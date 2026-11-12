@@ -1,28 +1,66 @@
 {
-  "provisional": true,
-  "note": "Stock assignments on Bob's pad, 2026-11-12. All three dials send identical codes, so they all decode as 'enc.?'. loom:unique-assignments replaces this file. Key numbers are Bob's (row 1 = furthest from him, left to right), from raw-report-capture findings.",
+  "provisional": false,
+  "note": "Programmed on Bob's pad 2026-11-12 (loom:unique-assignments) and verified with one press per control. Keys numbered as Bob sees the pad: dials along the top edge, key 1 top-left, row-major. Dials 1-3 left to right; cw/ccw are as Bob physically turned them (the reverse of glra-studio's slot labels). Every code is one non-root hidutil can remap (loom:suppression-route).",
   "keys": {
-    "0x56": "key.1",
-    "0x57": "key.2",
-    "0x54": "key.3",
-    "0x58": "key.4",
-    "0x61": "key.5",
-    "0x5e": "key.6",
-    "0x5b": "key.7",
-    "0x63": "key.8",
-    "0x60": "key.9",
-    "0x5d": "key.10",
-    "0x5a": "key.11",
-    "0x62": "key.12",
-    "0x5f": "key.13",
-    "0x5c": "key.14",
-    "0x59": "key.15",
-    "0x55": "key.16"
+    "0x68": "key.1",
+    "0x69": "key.2",
+    "0x6a": "key.3",
+    "0x6b": "key.4",
+    "0x6c": "key.5",
+    "0x6d": "key.6",
+    "0x6e": "key.7",
+    "0x6f": "key.8",
+    "0x70": "key.9",
+    "0x71": "key.10",
+    "0x72": "key.11",
+    "0x73": "key.12",
+    "0x46": "key.13",
+    "0x47": "key.14",
+    "0x48": "key.15",
+    "0x49": "key.16"
   },
-  "keys_inferred": ["0x5b"],
   "consumer": {
-    "0xe2": {"control": "enc.?.push", "kind": "button"},
-    "0xe9": {"control": "enc.?", "kind": "turn", "action": "cw"},
-    "0xea": {"control": "enc.?", "kind": "turn", "action": "ccw"}
+    "0xe3": {
+      "control": "enc.1.push",
+      "kind": "button"
+    },
+    "0xe5": {
+      "control": "enc.1",
+      "kind": "turn",
+      "action": "cw"
+    },
+    "0xe4": {
+      "control": "enc.1",
+      "kind": "turn",
+      "action": "ccw"
+    },
+    "0xe6": {
+      "control": "enc.2.push",
+      "kind": "button"
+    },
+    "0xe8": {
+      "control": "enc.2",
+      "kind": "turn",
+      "action": "cw"
+    },
+    "0xe7": {
+      "control": "enc.2",
+      "kind": "turn",
+      "action": "ccw"
+    },
+    "0xf0": {
+      "control": "enc.3.push",
+      "kind": "button"
+    },
+    "0xf2": {
+      "control": "enc.3",
+      "kind": "turn",
+      "action": "cw"
+    },
+    "0xf1": {
+      "control": "enc.3",
+      "kind": "turn",
+      "action": "ccw"
+    }
   }
 }

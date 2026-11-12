@@ -9,7 +9,14 @@ from glra_osc.decode import Decoder, load_layout
 from glra_osc.events import ControlEvent, format_event
 from glra_osc.monitor import render
 
-FIXTURE = Path(__file__).parent / "fixtures" / "captured_reports.jsonl"
+FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURE = FIXTURES / "captured_reports.jsonl"  # 2026-11-12, stock assignments
+STOCK_LAYOUT = FIXTURES / "stock_layout.json"  # the layout the pad had before reprogramming
+ALLCONTROLS = FIXTURES / "allcontrols_reports.jsonl"  # 2026-11-12, final programmed layout
+
+
+def stock_decoder():
+    return Decoder(load_layout(STOCK_LAYOUT))
 
 
 def keys(*usages):
@@ -26,7 +33,7 @@ def captured(run):
 
 class KeyDecodeTests(unittest.TestCase):
     def setUp(self):
-        self.d = Decoder()
+        self.d = stock_decoder()
 
     def test_press_and_release(self):
         self.assertEqual(pairs(self.d.feed("keys", keys(0x56), 1.0)), [("key.1", "down")])
@@ -63,7 +70,7 @@ class KeyDecodeTests(unittest.TestCase):
 
 class ConsumerDecodeTests(unittest.TestCase):
     def setUp(self):
-        self.d = Decoder()
+        self.d = stock_decoder()
 
     def test_turn_counts_once_at_the_press(self):
         self.assertEqual(pairs(self.d.feed("consumer", b"\x03\xe9\x00", 0)), [("enc.?", "cw")])
@@ -99,17 +106,36 @@ class ConsumerDecodeTests(unittest.TestCase):
 
 
 class LayoutTests(unittest.TestCase):
-    def test_packaged_layout_is_provisional_with_sixteen_keys(self):
-        layout = load_layout()
+    def test_stock_layout_is_provisional_with_sixteen_keys(self):
+        layout = load_layout(STOCK_LAYOUT)
         self.assertTrue(layout["provisional"])
         self.assertEqual(sorted(layout["keys"].values()), sorted(f"key.{n}" for n in range(1, 17)))
+
+    def test_packaged_layout_is_final_with_25_unique_codes(self):
+        layout = load_layout()
+        self.assertFalse(layout["provisional"])
+        self.assertEqual(sorted(layout["keys"].values()), sorted(f"key.{n}" for n in range(1, 17)))
+        controls = {e["control"] for e in layout["consumer"].values()}
+        self.assertEqual(
+            controls,
+            {f"enc.{n}{suffix}" for n in (1, 2, 3) for suffix in ("", ".push")},
+        )
+        self.assertEqual(len(layout["consumer"]), 9)
+        turns = {
+            (e["control"], e["action"]) for e in layout["consumer"].values() if e["kind"] == "turn"
+        }
+        self.assertEqual(len(turns), 6)
+        # 25 actions, 25 distinct codes (key usages and consumer usages are separate spaces).
+        self.assertEqual(len(layout["keys"]) + len(layout["consumer"]), 25)
+        self.assertEqual(len(set(layout["keys"])), 16)
+        self.assertEqual(len(set(layout["consumer"])), 9)
 
 
 class CapturedFixtureTests(unittest.TestCase):
     """Replays the 2026-11-12 raw captures (tests/fixtures/captured_reports.jsonl)."""
 
     def decode_all(self, run):
-        d, out = Decoder(), []
+        d, out = stock_decoder(), []
         for r in captured(run):
             out += [(r["step"], e) for e in d.feed(r["source"], bytes.fromhex(r["hex"]), r["t"])]
         return out
@@ -149,6 +175,31 @@ class CapturedFixtureTests(unittest.TestCase):
         self.assertIn(("enc.?", "ccw"), pairs(events))
 
 
+class FinalLayoutReplayTests(unittest.TestCase):
+    """Replays the 2026-11-12 one-control-per-step capture against the packaged layout."""
+
+    def test_each_step_decodes_to_exactly_its_own_control(self):
+        steps = {}
+        for r in map(json.loads, ALLCONTROLS.read_text().splitlines()):
+            steps.setdefault(r["step"], []).append(r)
+        self.assertEqual(len(steps), 25)
+        d = Decoder()  # packaged layout
+        for step, reports in steps.items():
+            events = []
+            for r in reports:
+                events += d.feed(r["source"], bytes.fromhex(r["hex"]), r["t"])
+            if step.startswith("key"):
+                control = f"key.{step[3:]}"
+                self.assertEqual(pairs(events), [(control, "down"), (control, "up")], step)
+            elif step.endswith("-push"):
+                control = f"enc.{step[3]}.push"
+                self.assertEqual(pairs(events), [(control, "down"), (control, "up")], step)
+            else:
+                number, action = step[3], step.split("-")[1]
+                # The capture holds two detents per turn step.
+                self.assertEqual(pairs(events), [(f"enc.{number}", action)] * 2, step)
+
+
 class FormatTests(unittest.TestCase):
     def test_lines(self):
         wall = 1_700_000_000.122
@@ -162,10 +213,10 @@ class FormatTests(unittest.TestCase):
         )
 
     def test_render_adds_raw_line_only_when_asked(self):
-        d = Decoder()
+        d = stock_decoder()
         plain = render(d, "keys", keys(0x56), 0, 1_700_000_000.0)
         self.assertEqual(len(plain), 1)
-        d = Decoder()
+        d = stock_decoder()
         raw = render(d, "keys", keys(0x56), 0, 1_700_000_000.0, raw=True)
         self.assertEqual(len(raw), 2)
         self.assertTrue(raw[0].endswith("RAW keys 0000560000000000"))

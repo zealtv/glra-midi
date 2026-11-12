@@ -7,7 +7,7 @@ from unittest import mock
 from glra_osc import runner
 from glra_osc.mapping import MappingError
 
-KEY1_DOWN = bytes([0, 0, 0x56, 0, 0, 0, 0, 0])  # usage 0x56 = key 1 in the provisional layout
+KEY1_DOWN = bytes([0, 0, 0x68, 0, 0, 0, 0, 0])  # usage 0x68 = key 1 in the final layout
 ALL_UP = bytes(8)
 
 

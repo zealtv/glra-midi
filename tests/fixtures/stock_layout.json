@@ -1,0 +1,28 @@
+{
+  "provisional": true,
+  "note": "Stock assignments on Bob's pad, 2026-11-12. All three dials send identical codes, so they all decode as 'enc.?'. loom:unique-assignments replaces this file. Key numbers are Bob's (row 1 = furthest from him, left to right), from raw-report-capture findings.",
+  "keys": {
+    "0x56": "key.1",
+    "0x57": "key.2",
+    "0x54": "key.3",
+    "0x58": "key.4",
+    "0x61": "key.5",
+    "0x5e": "key.6",
+    "0x5b": "key.7",
+    "0x63": "key.8",
+    "0x60": "key.9",
+    "0x5d": "key.10",
+    "0x5a": "key.11",
+    "0x62": "key.12",
+    "0x5f": "key.13",
+    "0x5c": "key.14",
+    "0x59": "key.15",
+    "0x55": "key.16"
+  },
+  "keys_inferred": ["0x5b"],
+  "consumer": {
+    "0xe2": {"control": "enc.?.push", "kind": "button"},
+    "0xe9": {"control": "enc.?", "kind": "turn", "action": "cw"},
+    "0xea": {"control": "enc.?", "kind": "turn", "action": "ccw"}
+  }
+}
