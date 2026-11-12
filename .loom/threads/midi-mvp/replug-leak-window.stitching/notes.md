@@ -61,3 +61,21 @@ Repeated `enumerate failed` messages are reported once per distinct error.
 `test_a_reconnect_restarts_the_fast_window` now asserts reconnect within 0.1 s
 (it fails at 0.95 s without the change). Live dry-run self-check after the change: 26
 entries per service while running, CapsLock only after SIGTERM.
+
+## Bob's replug test (2026-11-12, ~21:58) — still leaks
+
+`glra-osc run` at `db9ac8e`; Bob replugged and pressed keys 2/16 repeatedly.
+The runner pane showed `^[[2~` (Insert, key 16) and `^[[1~` (Home, key 2).
+`checks/poll.log` (read-only poller, 20 ms, `checks/poll_mapping.py`):
+
+- 03.792 pad re-enumerated (0 entries); 03.822 ours applied (30 ms; fast rescan worked)
+- macOS replaced the mapping with CapsLock-only **three times**, ~1 s apart:
+  04.864 → repaired 04.957 (93 ms), 05.904 → 05.969 (65 ms), 06.922 → 06.986 (64 ms)
+- `checks/215642-run.log`: three "pad mapping reapplied" lines, matching.
+
+So the overwrite isn't a single event right after connect, and polling only
+narrows each gap to ~65–95 ms. It didn't close. Not yet known: whether each
+overwrite is a reaction to our own set (the gaps from set to next overwrite run
+~0.95–1.04 s), and where macOS 14 keeps the per-device modifier setting (not
+under `com.apple.keyboard.modifiermapping.13998-9333-0` in either global
+preferences plist, checked 2026-11-12).
