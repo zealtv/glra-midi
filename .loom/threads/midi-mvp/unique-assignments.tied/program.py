@@ -42,7 +42,9 @@ def key_slot(k):
     return ROWS[c - 1][4 - r]
 
 
-KEY_USAGES = list(range(0x68, 0x74)) + [0x46, 0x47, 0x48, 0x49]  # F13–F24, PrtSc..Insert
+# Revised 2026-11-12 after the DAW check: macOS turned F14/F15 (keys 2, 3) and
+# PrintScreen/ScrollLock (keys 13, 14) into brightness. Those keys now use Home/PageUp/End/PageDown.
+KEY_USAGES = [0x68, 0x4A, 0x4B] + list(range(0x6B, 0x74)) + [0x4D, 0x4E, 0x48, 0x49]
 DIAL_USAGES = [(0xE3, 0xE4, 0xE5), (0xE6, 0xE7, 0xE8), (0xF0, 0xF1, 0xF2)]
 
 

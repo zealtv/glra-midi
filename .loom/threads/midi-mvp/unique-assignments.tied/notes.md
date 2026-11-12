@@ -18,3 +18,9 @@
   It uses the same verified path. Run it from the repo root with this file's path.
 - **Without glra-osc running:** F13–F24 do little on macOS, but Insert (key 16)
   types `ESC[2~` in a terminal, and PrintScreen/ScrollLock/Pause may do something in some apps.
+
+## Revision, 2026-11-12 (DAW check)
+Bob saw keys 2, 3, 13 and 14 (F14, F15, PrintScreen, ScrollLock) change screen brightness
+during the live run, at least after a replug (see mvp-acceptance). Those keys were
+reprogrammed to Home `0x4A`, PageUp `0x4B`, End `0x4D` and PageDown `0x4E`, with verified writes,
+so the pad can't touch brightness even when glra-osc isn't running.

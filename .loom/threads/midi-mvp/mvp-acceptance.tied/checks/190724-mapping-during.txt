@@ -1,0 +1,213 @@
+RegistryID  Key                   Value
+100013c2c   UserKeyMapping   (
+        {
+        HIDKeyboardModifierMappingDst = 30064771299;
+        HIDKeyboardModifierMappingSrc = 30064771129;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771176;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771177;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771178;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771179;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771180;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771181;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771182;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771183;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771184;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771185;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771186;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771187;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771142;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771143;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771144;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771145;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607779;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607781;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607780;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607782;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607784;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607783;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607792;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607794;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607793;
+    }
+)
+100013c34   UserKeyMapping   (
+        {
+        HIDKeyboardModifierMappingDst = 30064771299;
+        HIDKeyboardModifierMappingSrc = 30064771129;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771176;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771177;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771178;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771179;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771180;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771181;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771182;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771183;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771184;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771185;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771186;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771187;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771142;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771143;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771144;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 30064771145;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607779;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607781;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607780;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607782;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607784;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607783;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607792;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607794;
+    },
+        {
+        HIDKeyboardModifierMappingDst = 30064771072;
+        HIDKeyboardModifierMappingSrc = 51539607793;
+    }
+)

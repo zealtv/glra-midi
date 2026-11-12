@@ -1,0 +1,13 @@
+RegistryID  Key                   Value
+100013c2c   UserKeyMapping   (
+        {
+        HIDKeyboardModifierMappingDst = 30064771299;
+        HIDKeyboardModifierMappingSrc = 30064771129;
+    }
+)
+100013c34   UserKeyMapping   (
+        {
+        HIDKeyboardModifierMappingDst = 30064771299;
+        HIDKeyboardModifierMappingSrc = 30064771129;
+    }
+)

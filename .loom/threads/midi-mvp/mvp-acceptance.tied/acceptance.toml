@@ -1,0 +1,125 @@
+# glra-osc default mapping: the file to copy and edit.
+#
+# Controls: key.1..key.16, enc.1..enc.3 (push + turn). Leave a control out to leave it unmapped.
+#
+# A push/key binding is either a note or a cc:
+#   note = 0..127, velocity = 1..127 (default 127), mode = "momentary" | "toggle"
+#   cc   = 0..127, on = 0..127 (default 127), off = 0..127 (default 0), mode = ...
+#
+# An encoder turn is relative or absolute:
+#   type = "relative", cc = 0..127,
+#       encoding = "twos-complement" (default) | "binary-offset" (64 +/- n) | "signed-bit"
+#   type = "absolute", cc = 0..127, initial = 0..127 (default 64), step = 1..127 (default 1);
+#       the value clamps to 0..127
+
+[global]
+port = "GLRA K16"
+channel = 1            # 1..16
+
+[key.1]
+note = 36
+velocity = 127
+mode = "momentary"
+
+[key.2]
+note = 37
+velocity = 127
+mode = "momentary"
+
+[key.3]
+note = 38
+velocity = 127
+mode = "momentary"
+
+[key.4]
+note = 39
+velocity = 127
+mode = "momentary"
+
+[key.5]
+note = 40
+velocity = 127
+mode = "momentary"
+
+[key.6]
+note = 41
+velocity = 127
+mode = "momentary"
+
+[key.7]
+note = 42
+velocity = 127
+mode = "momentary"
+
+[key.8]
+note = 43
+velocity = 127
+mode = "momentary"
+
+[key.9]
+note = 44
+velocity = 127
+mode = "momentary"
+
+[key.10]
+note = 45
+velocity = 127
+mode = "momentary"
+
+[key.11]
+note = 46
+velocity = 127
+mode = "momentary"
+
+[key.12]
+note = 47
+velocity = 127
+mode = "momentary"
+
+[key.13]
+note = 48
+velocity = 127
+mode = "momentary"
+
+[key.14]
+note = 49
+velocity = 127
+mode = "momentary"
+
+[key.15]
+note = 50
+velocity = 127
+mode = "momentary"
+
+[key.16]
+note = 51
+velocity = 127
+mode = "toggle"
+
+[enc.1.push]
+note = 52
+mode = "momentary"
+
+[enc.1.turn]
+type = "relative"
+cc = 16
+encoding = "twos-complement"
+
+[enc.2.push]
+note = 53
+mode = "momentary"
+
+[enc.2.turn]
+type = "relative"
+cc = 17
+encoding = "twos-complement"
+
+[enc.3.push]
+note = 54
+mode = "momentary"
+
+[enc.3.turn]
+type = "absolute"
+cc = 18
+initial = 64
+step = 4
