@@ -1,6 +1,6 @@
 # Working notes for agents
 
-glra-osc: purpose not yet recorded (the repo had no README or code when set up on 2026-11-12).
+glra-osc: host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI controller (OSC later), building on the peer repo `../glra-studio`. A development repo; as of 2026-11-12 the plan lives on the loom (`midi-mvp`).
 
 `CLAUDE.md` is a symlink to this file, so every agent runtime reads the same notes.
 

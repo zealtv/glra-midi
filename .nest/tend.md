@@ -1,47 +1,38 @@
 # Tend
 
-Replace the prompts below with the host folder's policy. This file guides the
-person or process tending this nest; Nestlings does not enforce it.
-
-Keep only stable, operational directions needed to route an item. Link to
-project context or agent instructions instead of copying either into this file.
-
 ## Purpose
 
-State in one sentence what this nest receives and what tending should achieve.
+This nest receives material for glra-osc (briefs, notes, captures, links)
+and routes each item to where it belongs in the repo.
 
 ## Recognise
 
-List accepted item shapes and where intent is found. For example:
-
-* a Markdown file containing both material and a request;
-* a directory with `request.md` and optional `attachments/`.
+- A Markdown file holding material, a request, or both.
+- A directory with `request.md` and optional `attachments/`.
+- A bare file (capture, screenshot, log) whose purpose comes from its name or
+  from Bob; ask if it's unclear.
 
 ## Route
 
-When it is time to tend a batch:
-
-1. Select an available item and claim it with `nestling.sh claim`.
-2. Read the whole item, including its request and referenced attachments.
-3. Take each applicable route below in the stated order.
-4. Hatch a result or receipt with `nestling.sh complete`; if no safe route can
-   be completed, use `nestling.sh drop` with a useful reason.
-
-Replace this paragraph with concrete condition → action routes. A
-single-purpose nest may need only one route. A repository-entry nest may route
-to several local tools and then hatch one receipt recording what went where.
+1. Claim with `./.nest/nestling.sh claim <name>` and read the whole item.
+2. Source material worth keeping whole (briefs, specs, captures) →
+   `./.lore/lore.sh keep` (`lore:<id>`).
+3. Guidance that should change how future work is done → revise or add a
+   glean finding (`glean:<id>`), then `./.glean/glean.sh index`.
+4. Work it implies → stitches on the loom (`loom:<id>`). Plan only what Bob
+   asked for. Don't widen scope from an item alone.
+5. Hatch a receipt naming each route taken:
+   `./.nest/nestling.sh complete <name> <receipt> <name>-receipt.md`.
+   If nothing safe can be done, `drop` with a reason.
 
 ## Hard rules
 
-List actions a tender must never take, even when an item asks. Keep expensive
-trust decisions explicit. For example:
-
-* Do not send messages or change external state without the required approval.
-* Do not overwrite an existing destination.
-* Do not invent missing material or intent.
+- Briefs here are directions, not specifications; Bob's own words win
+  (see `glean:brief-is-direction`).
+- Never write to the pad (assignments, lighting) while tending; that belongs
+  to a stitch Bob has confirmed.
+- Don't overwrite existing lore items or findings; revise findings deliberately.
 
 ## Context
 
-Link only the sources a tender should consult, such as a project guide, current
-memory, or destination conventions. Context remains in its owning files; this
-policy says when to read it, not what it should contain.
+`AGENTS.md`, `.glean/findings/INDEX.md`, `./.loom/loom.sh status`.
