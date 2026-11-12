@@ -8,6 +8,7 @@ a second and reopens whatever is missing. Nothing is ever written to the pad.
 """
 
 import queue
+import signal
 import sys
 import threading
 import time
@@ -15,6 +16,7 @@ import time
 from .decode import Decoder
 from .device.backend import enumerate_devices, open_device
 from .events import format_event, format_time
+from .silence import Guard, SilenceError, Silencer, TYPING_WARNING, refusal_message
 
 INTERFACE_SOURCE = {0: "keys", 1: "consumer"}  # interface 2 is the silent vendor channel
 RESCAN_SECONDS = 1.0
@@ -54,17 +56,21 @@ def _reader(source, info, events, stop):
         events.put(("lost", source, "stopped"))
 
 
-def watch(decoder, on_report, say, on_lost=None):
+def watch(decoder, on_report, say, on_lost=None, on_pad=None):
     """Read the pad until KeyboardInterrupt; the loop `monitor` and `run` share.
 
     `on_report(source, data, t, wall)` gets each raw report. When an interface
     drops, the decoder resets and `on_lost()` runs (so `run` can release held
     notes) before the rescan reopens it. `say(text)` prints status lines.
+    `on_pad()` runs each time the pad (re)appears with all its input interfaces
+    visible, before any reader opens (silent-capture applies its key mapping
+    there). If it raises, the loop ends with that exception.
     """
     events = queue.Queue()
     stop = threading.Event()
     threads = {}  # source -> Thread
     waiting_noted = False
+    pad_present = False
 
     try:
         next_scan = 0.0
@@ -78,6 +84,9 @@ def watch(decoder, on_report, say, on_lost=None):
                     except Exception as exc:  # hidapi enumeration trouble: retry next scan
                         found = {}
                         say(f"# enumerate failed: {exc}")
+                    if on_pad and not pad_present and set(INTERFACE_SOURCE.values()) <= set(found):
+                        on_pad()
+                        pad_present = True
                     for source in missing:
                         if source in found:
                             t = threading.Thread(
@@ -103,6 +112,7 @@ def watch(decoder, on_report, say, on_lost=None):
             else:  # lost
                 _, source, why = item
                 threads.pop(source, None)
+                pad_present = False  # re-run on_pad when the pad is back
                 decoder.reset()
                 if on_lost:
                     on_lost()
@@ -116,12 +126,18 @@ def watch(decoder, on_report, say, on_lost=None):
             t.join(timeout=1.0)
 
 
-def run(raw=False, out=None):
-    out = out or sys.stdout
+def _terminate(signum, frame):
+    raise KeyboardInterrupt  # same exit path as Ctrl-C
+
+
+def run(raw=False, out=None, err=None, allow_typing=False, silencer=None):
+    out, err = out or sys.stdout, err or sys.stderr
     decoder = Decoder()
 
     def say(text):
         print(text, file=out, flush=True)
+
+    guard = Guard(silencer or Silencer(decoder.layout), say, allow_typing)
 
     def on_report(source, data, t, wall):
         for line in render(decoder, source, data, t, wall, raw):
@@ -129,5 +145,15 @@ def run(raw=False, out=None):
 
     if decoder.layout["provisional"]:
         say("# layout is provisional: all dials decode as 'enc.?' (loom:unique-assignments)")
-    watch(decoder, on_report, say)
+    if allow_typing:
+        print(TYPING_WARNING, file=err, flush=True)
+    previous = signal.signal(signal.SIGTERM, _terminate)
+    try:
+        watch(decoder, on_report, say, on_pad=guard.on_pad)
+    except SilenceError as exc:
+        print(refusal_message(exc), file=err, flush=True)
+        return 1
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+        guard.close()
     return 0

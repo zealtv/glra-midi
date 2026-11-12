@@ -1,6 +1,6 @@
-# Seizing the pad's keyboard interfaces failed without root; a no-root hidutil remap works only for non-alphanumeric codes
+# The pad is silenced without root by a per-device hidutil mapping to "no event"; seizing needs root and isn't used
 
-When trying to stop the pad typing into apps, or seeing 0xe00002c1 / "open failed" on an exclusive open.
+When trying to stop the pad typing into apps, editing `glra_osc/silence.py`, or seeing 0xe00002c1 / "open failed" on an exclusive open, or "Run as root to remap alphanumerics".
 
 ## Triggers
 - seize
@@ -40,8 +40,19 @@ Hands-on tests, 2026-11-12, macOS 14.6, non-root:
 - Untested: whether the destination truly emits nothing, and whether the raw hidapi
   reader still sees the original usage under the mapping.
 
-Candidate routes and the decision belong to `loom:suppression-route`;
-revise this finding with the outcome.
+## Outcome (2026-11-12)
+`loom:suppression-route` chose the hidutil route; `loom:silent-capture` built it in
+`glra_osc/silence.py`. `glra-osc run` and `monitor` map every layout code (25) to
+`0x700000000` through `hidutil property --matching {VendorID,ProductID} --set`, merged
+with the entries already on the pad's services (Bob's CapsLock→Cmd), verified by
+re-reading. They re-apply on every (re)connect from `watch(on_pad=...)`, restore the
+saved original on exit/Ctrl-C/SIGTERM, and refuse to run without `--allow-typing`
+if apply or verify fails. A refusal prints the "Run as root" text to stdout with exit 1
+and applies nothing. After `kill -9` the mapping stays until replug;
+`glra-osc unsilence` removes entries whose source is ours, and a later run treats
+such leftovers as "not original". With no mapping, `--get` prints each service
+with an empty `( )`; with no matching service it prints nothing. The raw hidapi
+readers still see the original reports under the mapping.
 
 ## Associations
 - [[k16n3-hid-interfaces]]

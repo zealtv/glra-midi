@@ -1,0 +1,5 @@
+RegistryID  Key                   Value
+100013c2c   UserKeyMapping   (
+)
+100013c34   UserKeyMapping   (
+)
