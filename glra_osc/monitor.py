@@ -54,19 +54,18 @@ def _reader(source, info, events, stop):
         events.put(("lost", source, "stopped"))
 
 
-def run(raw=False, out=None):
-    out = out or sys.stdout
-    decoder = Decoder()
+def watch(decoder, on_report, say, on_lost=None):
+    """Read the pad until KeyboardInterrupt; the loop `monitor` and `run` share.
+
+    `on_report(source, data, t, wall)` gets each raw report. When an interface
+    drops, the decoder resets and `on_lost()` runs (so `run` can release held
+    notes) before the rescan reopens it. `say(text)` prints status lines.
+    """
     events = queue.Queue()
     stop = threading.Event()
     threads = {}  # source -> Thread
     waiting_noted = False
 
-    def say(text):
-        print(text, file=out, flush=True)
-
-    if decoder.layout["provisional"]:
-        say("# layout is provisional: all dials decode as 'enc.?' (loom:unique-assignments)")
     try:
         next_scan = 0.0
         while True:
@@ -97,8 +96,7 @@ def run(raw=False, out=None):
                 continue
             if item[0] == "report":
                 _, source, data, t, wall = item
-                for line in render(decoder, source, data, t, wall, raw):
-                    say(line)
+                on_report(source, data, t, wall)
             elif item[0] == "opened":
                 waiting_noted = False
                 say(f"# {item[1]} interface open")
@@ -106,6 +104,8 @@ def run(raw=False, out=None):
                 _, source, why = item
                 threads.pop(source, None)
                 decoder.reset()
+                if on_lost:
+                    on_lost()
                 waiting_noted = False
                 say(f"# {source} interface lost ({why}); retrying")
     except KeyboardInterrupt:
@@ -114,4 +114,20 @@ def run(raw=False, out=None):
         stop.set()
         for t in threads.values():
             t.join(timeout=1.0)
+
+
+def run(raw=False, out=None):
+    out = out or sys.stdout
+    decoder = Decoder()
+
+    def say(text):
+        print(text, file=out, flush=True)
+
+    def on_report(source, data, t, wall):
+        for line in render(decoder, source, data, t, wall, raw):
+            say(line)
+
+    if decoder.layout["provisional"]:
+        say("# layout is provisional: all dials decode as 'enc.?' (loom:unique-assignments)")
+    watch(decoder, on_report, say)
     return 0

@@ -14,7 +14,9 @@ up to cp312. `MidiOut().open_virtual_port(name)` created a port that a second
 `MidiIn` client, and a separate process, could list; a note-on sent through it
 arrived. API: `rtmidi2.get_in_ports()`, `MidiOut.send_noteon/send_noteoff/send_cc/send_raw`,
 `MidiIn.callback = fn(msg, timestamp)`. Audio MIDI Setup's own window wasn't
-looked at. Details: `loom:project-skeleton` notes.
+looked at. `glra_osc/runner.py` (`MidiPort`) sends with `send_raw(*message)`; a loopback
+client received note on / CC / note off byte-exact on 2026-11-12. Details:
+`loom:project-skeleton` and `loom:midi-out` notes.
 
 ## Associations
 - [[glra-studio-reuse]]
