@@ -7,7 +7,7 @@ for device I/O.
 **Status:** pre-alpha, but working. As of 2026-11-12 `glra-osc run` sends the pad's
 16 keys and 3 encoders as MIDI on a virtual port and silences the pad so it doesn't
 type into apps; Bob checked it with a DAW the same day. OSC output doesn't exist yet.
-Planned work lives on the loom (`.loom/`, goal `midi-mvp`).
+Planned work lives on the loom (`.loom/`); as of 2026-11-12 the MIDI MVP is done.
 
 ## Usage
 
