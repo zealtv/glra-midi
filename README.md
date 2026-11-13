@@ -109,6 +109,14 @@ Needs Python 3.13+ on macOS (Homebrew's `python3.14` works).
 
 `tools/app-capture.sh <state> <out.png>` renders a named state of the app offscreen.
 
+## Help wanted
+
+We're looking for information on the pad's microcontroller (marked `SDC32K 952CCU6`;
+catalogued, we think, as the Masses Chip `M9F9520`): a datasheet, pinout, programming
+interface, or whether the flash can be read back. If you know anything, or an AI agent
+you work with does, see [`docs/wanted-m9f9520.md`](docs/wanted-m9f9520.md) for what we
+know and how to answer (a GitHub issue labelled `chip-info`).
+
 ## Licence
 
 GPL-3.0-only, because it reuses glra-studio code. See `LICENSE` and

@@ -59,6 +59,15 @@ near-duplicate, run `./.glean/glean.sh index`, and commit it with the work that
 earned it. Claude Code's auto memory is switched off here in
 `.claude/settings.json` (`autoMemoryEnabled: false`).
 
+## Help wanted: chip information
+
+The repo carries a standing public request for information on the pad's MCU
+(`SDC32K 952CCU6`, candidate `M9F9520`): `docs/wanted-m9f9520.md`. If your task
+turns up a datasheet, pinout, programming interface or readback fact, or evidence on whether the
+marked part is `M9F9520` silicon, tell Bob and record it with its source and date
+(a finding in glean, the source in lore); answers from outside arrive as GitHub
+issues labelled `chip-info`.
+
 ## Ownership
 
 One arrival may earn several routes: the source kept in lore, a constraint
