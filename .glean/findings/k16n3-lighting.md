@@ -38,6 +38,13 @@ Probed on Bob's pad (36ae:2475, firmware 103) on 2026-11-13 with Bob watching:
   persisted write: set rarely, never modulate live.
 - The flows suggest the vendor's frame has the dials on the **right**
   (`loom:orientation`).
+- **No RAM path found** (desk, `loom:led-ram-path`, 2026-11-13): the vendor
+  configurator's group-6 opcodes `07 09 0c 0d 40 41 fb` cover the factory key
+  table, bulk keymap, macros, URL and profile, none of them lighting; its finer
+  lighting methods are empty stubs. Custom mode sends one `06 14` per key
+  *click*, with no preview; `06 12` has no caller. Non-custom colour drags
+  stream `06 0b` undebounced. sdcx-keypad has no persistence data for `06 14`.
+  Open: whether `06 0b` commits lazily (quick-unplug test proposed there).
 - Not tested: max write rate, input interference, bulk `06 12`, flash endurance.
 - Bob's stock table holds a red X (keys 1, 4, 6, 7, 10, 11, 13, 16); restore
   target `0100040403030008ffffff` + that X.
