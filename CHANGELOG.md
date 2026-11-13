@@ -14,6 +14,10 @@ release.
 
 ### Fixed
 
+- Config app: quitting no longer ends with a "Python quit unexpectedly" crash report on macOS.
+  hidapi was first loaded on the pad worker thread, and at exit its shutdown hook closed the
+  device manager against that thread's already-gone run loop. The app now loads it on the main
+  thread when it starts.
 - Config app: removing a layer now renumbers the `layer-set` keys that point above it, so
   each keeps reaching the same layer, and flags a key that pointed at the removed layer in the
   Problems list (it shows as `→ L?` until you pick another layer). Before, such keys kept their
