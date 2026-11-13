@@ -303,6 +303,21 @@ class ReloadTests(TempHome):
         self.assertEqual(values[-1], 0)  # the reload's release; not left mid-glide
         self.assertNotIn(100, values)
 
+    def test_a_latched_cc_and_the_cc_table_survive_a_reload(self):
+        latch = GLIDE.replace("rise-ms = 100", 'mode = "latch"\nrise-ms = 0')
+        write(self.path, latch)
+
+        def script(s):
+            s.report("keys", KEY1_DOWN, 0.0)  # latches at 100
+            s.report("keys", ALL_UP, 0.1)
+            write(self.path, latch + "# edited\n")
+            s.wake(0.6)  # reload
+            s.report("keys", KEY1_DOWN, 0.7)  # still latched: this press unlatches
+
+        self.session.run(script)
+        values = [int(m.split()[2], 16) for m in self.session.midi if m.startswith("b0 14")]
+        self.assertEqual(values, [100, 0])
+
     def test_an_invalid_file_keeps_the_old_profile_and_reports_once(self):
         def script(s):
             write(self.path, "version = 1\n[key.1]\nkind = 'nope'\n")

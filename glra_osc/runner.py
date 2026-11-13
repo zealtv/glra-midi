@@ -156,7 +156,7 @@ def run(
         old_engine = state["engine"]
         send_all(old_engine.release_all())  # nothing held or gliding crosses the swap (3.7)
         state["profile"] = new
-        state["engine"] = Engine(new, layer=old_engine.layer, on_layer=on_layer)
+        state["engine"] = Engine(new, layer=old_engine.layer, on_layer=on_layer, carry=old_engine)
         say(f"# reloaded {path}")
         if new.port != port_name:
             say(f"# port stays {port_name!r}; restart `run` to use {new.port!r}")

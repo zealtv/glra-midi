@@ -374,6 +374,7 @@ already playing.
   dial gives it (2.4), else 0. Relative dials send deltas and neither read nor
   change it.
 - The value table survives layer changes; `release_all` doesn't reset it.
+- A profile reload keeps it too: the new engine starts from the old one's table (`initial` seeds only pairs the old table lacks) and keeps each CC latch whose (control, layer) still holds an equal latched `cc-momentary`; `release_all` still releases notes, held CCs and glides as in 3.7 (Claude, `fix-reload-cc-state`, 2026-11-13).
 
 ### 3.5 What each kind sends
 
