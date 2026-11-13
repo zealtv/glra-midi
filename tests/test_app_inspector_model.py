@@ -97,6 +97,19 @@ class DescribeTests(unittest.TestCase):
             [(a["layer"], a["text"]) for a in d["alsoOn"]], [(2, "L2 CC21 = 64"), (3, "L3 —")]
         )
 
+    def test_a_failed_note_draft_blanks_the_name_hint(self):
+        p = profile_with(**{"key.2": prof.PerLayer.of({1: prof.Note(note=37)})})
+        d = insp.describe(p, "key.2", 1, drafts={"note": ("300", "must be 0..127")})
+        self.assertEqual(d["noteName"], "")
+        self.assertEqual(d["fields"]["note"]["text"], "300")
+        # a draft that parses (no error) keeps the hint, and so does no draft at all
+        d = insp.describe(p, "key.2", 1, drafts={"note": ("38", "")})
+        self.assertEqual(d["noteName"], "C#1")
+        self.assertEqual(insp.describe(p, "key.2", 1)["noteName"], "C#1")
+        # an error on another field leaves the note's hint alone
+        d = insp.describe(p, "key.2", 1, drafts={"velocity": ("999", "must be 1..127")})
+        self.assertEqual(d["noteName"], "C#1")
+
     def test_a_global_event_is_global_on_every_tab(self):
         p = profile_with(**{"key.1": prof.Note(note=36)})
         for tab in (None, 1, 3):

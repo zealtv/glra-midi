@@ -203,7 +203,10 @@ def describe(profile, control, tab, drafts=None, note_names=True):
         out["appliesText"] = "All layers" if shape == "global" else "This layer"
         out["fields"] = _field_entries(action, drafts)
         if isinstance(action, prof.Note):
-            out["noteName"] = note_name(action.note) if note_names else ""
+            # The hint follows the field: with a draft that failed, the profile still holds the
+            # last good value, and its name beside the rejected text would mislead.
+            note_draft_error = drafts.get("note", ("", ""))[1]
+            out["noteName"] = note_name(action.note) if note_names and not note_draft_error else ""
     if shape == "per-layer":
         for n in range(1, profile.layer_count + 1):
             if n == tab:

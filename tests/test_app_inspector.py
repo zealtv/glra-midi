@@ -84,6 +84,17 @@ class EventKindTests(InspectorCase):
         self.type("channel", "default")
         self.assertIsNone(self.event("key.5", 1).channel)
 
+    def test_the_note_name_hint_goes_blank_while_the_note_field_is_invalid(self):
+        self.pick("key.5")
+        self.c.setAction("event")
+        self.type("note", "60")
+        self.assertEqual(self.edit["noteName"], "C3")
+        self.type("note", "300")
+        self.assertNotEqual(self.edit["fields"]["note"]["error"], "")
+        self.assertEqual(self.edit["noteName"], "")
+        self.type("note", "61")
+        self.assertEqual(self.edit["noteName"], "C#3")
+
     def test_cc_momentary_fields(self):
         self.pick("key.5")
         self.c.setKind("cc-momentary")
