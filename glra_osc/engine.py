@@ -2,8 +2,10 @@
 
 """Pure engine: ControlEvents + a profile in, raw MIDI messages out.
 
-No I/O and no clock. `Engine.handle(event)` returns a list of `bytes` messages;
-`Engine.release_all()` returns what undoes everything still held and forgets that
+No I/O and no clock of its own: time comes in through `event.t` and `tick(now)`.
+`Engine.handle(event)` returns a list of `bytes` messages; `Engine.tick(now)` returns the
+glide messages due; `Engine.next_due()` says when to call `tick` again (None: nothing
+glides); `Engine.release_all()` returns what undoes everything still held and forgets that
 state. Adapters (rtmidi2 now, OSC later) send or print what comes back. The rules are
 in `docs/config-app.md` section 3.
 
@@ -15,12 +17,20 @@ A release goes to the binding its press started with, whatever the layer is by t
 State: the active layer (starts at 1), a latch per (control, layer) for per-layer
 controls and one per global control, and one CC value per (channel, cc) that `cc-set`,
 `cc-step`, `cc-momentary` and `cc-absolute` share, seeded from the `initial` of the
-absolute dials. Glides (`ease-ms`, `curve`) belong to `cc-easing`: until then every CC
-change jumps to its target.
+absolute dials.
+
+Glides (section 3.6): a `cc-momentary` press glides to `high` over `rise-ms` and its release
+back to `low` over `fall-ms`; a `cc-step` glides over `ease-ms`; all along `curve`. One glide
+per (channel, cc): a later glide, a `cc-set` or an absolute turn on the same pair replaces
+it. A time of 0 jumps from `handle` itself. `tick` runs at 100 Hz while a glide runs and sends
+only when the rounded 7-bit value changes.
 
 Events for controls the profile leaves out, and the not-yet-identified dials
 (`enc.?`), produce nothing.
 """
+
+import math
+from dataclasses import dataclass
 
 from .profile import (
     CcAbsolute,
@@ -51,6 +61,36 @@ def _clamp(value):
     return max(0, min(127, value))
 
 
+TICK = 0.010  # seconds between glide ticks (100 Hz)
+_EPSILON = 1e-9  # slack so a tick that lands on the end time (up to float error) ends the glide
+
+# Easing curves on progress p in 0..1 (docs/config-app.md 3.6).
+CURVES = {
+    "linear": lambda p: p,
+    "ease-in": lambda p: p * p,
+    "ease-out": lambda p: 1 - (1 - p) ** 2,
+    "ease-in-out": lambda p: 2 * p * p if p < 0.5 else 1 - 2 * (1 - p) ** 2,
+}
+
+
+@dataclass
+class _Glide:
+    """One running glide on a (channel, cc): start and target values, start time, seconds."""
+
+    start: int
+    target: int
+    t0: float
+    duration: float
+    curve: str
+
+    def value(self, now):
+        p = min(1.0, max(0.0, (now - self.t0) / self.duration))
+        return int(math.floor(self.start + (self.target - self.start) * CURVES[self.curve](p) + 0.5))
+
+    def done(self, now):
+        return now >= self.t0 + self.duration - _EPSILON
+
+
 class Engine:
     def __init__(self, profile, layer=1, on_layer=None):
         """`layer` is where to start (1 if it doesn't exist in this profile); `on_layer`,
@@ -66,6 +106,9 @@ class Engine:
         self._latched_ccs = set()
         # (channel 0..15, cc) -> last value; absolute dials seed it from `initial`
         self._cc = {}
+        # (channel 0..15, cc) -> the running _Glide; insertion order is tick order
+        self._glides = {}
+        self._next_due = None
         for control in profile.controls.values():
             events = (e for _, e in control.events) if isinstance(control, PerLayer) else (control,)
             for event in events:
@@ -86,6 +129,23 @@ class Engine:
         """The shared value for (channel 1..16, cc): what the engine last sent or was seeded with."""
         return self._cc.get((channel - 1, cc), 0)
 
+    def next_due(self):
+        """When to call `tick` next (a time on the event clock), or None when nothing glides."""
+        return self._next_due
+
+    def tick(self, now):
+        """Messages the running glides owe at `now`: one per (channel, cc) at most, sent only
+        when the rounded value changed; a glide that has run its time ends exactly on its target."""
+        messages = []
+        for key, glide in list(self._glides.items()):
+            value = glide.target if glide.done(now) else glide.value(now)
+            if glide.done(now):
+                del self._glides[key]
+            if value != self._cc.get(key, 0):
+                messages.append(self._send_cc(key[0], key[1], value))
+        self._next_due = now + TICK if self._glides else None
+        return messages
+
     def handle(self, event):
         kind, _, rest = event.control.partition(".")
         number, _, part = rest.partition(".")
@@ -93,19 +153,25 @@ class Engine:
             return []
         if (kind == "key" and not part) or (kind == "enc" and part == "push"):
             if event.action == "down":
-                return self._press(event.control)
+                return self._press(event.control, event.t)
             if event.action == "up":
-                return self._release(event.control)
+                return self._release(event.control, event.t)
             return []
         if kind == "enc" and not part and event.action in ("cw", "ccw"):
             return self._turn(f"enc.{number}.turn", 1 if event.action == "cw" else -1)
         return []
 
     def release_all(self):
-        """Note Off for every held and latched note, held momentary CCs back to `low`;
-        forgets what was held. Latched CCs keep their value and their latch."""
+        """Note Off for every held and latched note; held momentary CCs jump to `low` and every
+        other running glide jumps to its target; forgets what was held. Latched CCs keep their
+        value and their latch."""
         messages = [m for m in (self._undo(e) for e in self._down.values() if e is not None) if m]
         messages.extend(self._latched_notes.values())
+        for key, glide in self._glides.items():
+            if glide.target != self._cc.get(key, 0):
+                messages.append(self._send_cc(key[0], key[1], glide.target))
+        self._glides.clear()
+        self._next_due = None
         self._down.clear()
         self._latched_notes.clear()
         return messages
@@ -129,6 +195,28 @@ class Engine:
         self._cc[(channel, cc)] = value
         return bytes([CONTROL_CHANGE | channel, cc, value])
 
+    def _cancel(self, key):
+        """Drop the glide on (channel, cc), if any; no glides left means no tick is due."""
+        self._glides.pop(key, None)
+        if not self._glides:
+            self._next_due = None
+
+    def _move(self, channel, cc, target, ms, curve, t, always=False):
+        """Take (channel, cc) to `target` over `ms`, replacing any glide on it; messages due now.
+
+        0 ms jumps: the message goes out now (always when `always`, else only on a change).
+        Longer starts a glide from the value last sent and sends nothing yet."""
+        key = (channel, cc)
+        current = self._cc.get(key, 0)
+        self._cancel(key)
+        if ms <= 0:
+            return [self._send_cc(channel, cc, target)] if always or target != current else []
+        if target != current:
+            self._glides[key] = _Glide(current, target, t, ms / 1000, curve)
+            if self._next_due is None:
+                self._next_due = t + TICK
+        return []
+
     # --- layers ----------------------------------------------------------------------------
 
     def _change_layer(self, action):
@@ -145,7 +233,7 @@ class Engine:
 
     # --- presses ---------------------------------------------------------------------------
 
-    def _press(self, name):
+    def _press(self, name, t):
         if name in self._down:
             return []  # repeated down
         binding, action = self._resolve(name)
@@ -159,12 +247,13 @@ class Engine:
         if isinstance(action, Note):
             return self._press_note(name, binding, action, channel)
         if isinstance(action, CcMomentary):
-            return self._press_cc_momentary(name, binding, action, channel)
+            return self._press_cc_momentary(name, binding, action, channel, t)
         self._down[name] = None
         if isinstance(action, CcSet):
+            self._cancel((channel, action.cc))  # a set value cancels a glide and wins
             return [self._send_cc(channel, action.cc, action.value)]  # always sends
         if isinstance(action, CcStep):
-            return self._step(channel, action.cc, action.step)
+            return self._press_cc_step(channel, action, t)
         return []
 
     def _press_note(self, name, binding, note, channel):
@@ -177,43 +266,57 @@ class Engine:
         self._down[name] = note
         return [bytes([NOTE_ON | channel, note.note, note.velocity])]
 
-    def _press_cc_momentary(self, name, binding, event, channel):
+    def _press_cc_momentary(self, name, binding, event, channel, t):
         if event.mode == "latch":
             self._down[name] = None
             if binding in self._latched_ccs:
                 self._latched_ccs.discard(binding)
-                return [self._send_cc(channel, event.cc, event.low)]
+                return self._move(channel, event.cc, event.low, event.fall_ms, event.curve, t, True)
             self._latched_ccs.add(binding)
-            return [self._send_cc(channel, event.cc, event.high)]
+            return self._move(channel, event.cc, event.high, event.rise_ms, event.curve, t, True)
         self._down[name] = event
-        return [self._send_cc(channel, event.cc, event.high)]
+        return self._move(channel, event.cc, event.high, event.rise_ms, event.curve, t, True)
 
-    def _step(self, channel, cc, delta):
-        old = self._cc.get((channel, cc), 0)
-        new = _clamp(old + delta)
-        return [] if new == old else [self._send_cc(channel, cc, new)]
+    def _press_cc_step(self, channel, event, t):
+        """Move the target by `step` (clamped); a running glide's target is the base, so
+        quick presses build on each other, and the new glide starts from the value sent."""
+        glide = self._glides.get((channel, event.cc))
+        base = glide.target if glide else self._cc.get((channel, event.cc), 0)
+        return self._move(channel, event.cc, _clamp(base + event.step), event.ease_ms, event.curve, t)
 
-    def _release(self, name):
+    def _release(self, name, t):
         if name not in self._down:
             return []  # up for something not down
-        message = self._undo(self._down.pop(name))
+        event = self._down.pop(name)
+        if isinstance(event, CcMomentary):
+            return self._move(self._channel(event), event.cc, event.low, event.fall_ms, event.curve, t, True)
+        message = self._undo(event)
         return [message] if message else []
 
     def _undo(self, event):
-        """The message that releases what `event` started (None: nothing to undo)."""
+        """The message that releases what `event` started now (None: nothing to undo)."""
         if event is None:
             return None
         channel = self._channel(event)
         if isinstance(event, Note):
             return bytes([NOTE_OFF | channel, event.note, 0])
+        self._cancel((channel, event.cc))
         return self._send_cc(channel, event.cc, event.low)
 
     # --- encoder turns ---------------------------------------------------------------------
 
+    def _step(self, channel, cc, delta):
+        """Absolute dial: the shared value plus `delta`, clamped; sent only on a change."""
+        old = self._cc.get((channel, cc), 0)
+        new = _clamp(old + delta)
+        return [] if new == old else [self._send_cc(channel, cc, new)]
+
     def _turn(self, name, delta):
         _, action = self._resolve(name)
         if isinstance(action, CcAbsolute):
-            return self._step(self._channel(action), action.cc, delta * action.step)
+            channel = self._channel(action)
+            self._cancel((channel, action.cc))  # a dial turn cancels a glide and wins
+            return self._step(channel, action.cc, delta * action.step)
         if isinstance(action, CcRelative):
             value = _relative_value(action.encoding, delta)
             return [bytes([CONTROL_CHANGE | self._channel(action), action.cc, value])]
