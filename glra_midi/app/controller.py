@@ -960,7 +960,12 @@ class Controller(QObject):
 
     @Slot()
     def poll(self):
-        """Look for a change to the open file or to `current` on disk (design 4.8)."""
+        """Look for a change to the open file or to `current` on disk (design 4.8). While a prompt
+        waits for its answer, look later: its action holds the profile as it was when the prompt
+        opened, and a reload underneath it would be overwritten by "OK" (review 9). The stamps
+        stay stale, so the change is noticed on the first poll after the answer."""
+        if self._confirmed is not None or self._after is not None:
+            return
         file_now = _stamp(self._path)
         current_now = _stamp(self._current_file())
         if file_now == self._file_stamp and current_now == self._current_stamp:

@@ -23,6 +23,9 @@ release.
 
 ### Fixed
 
+- Config app: a profile changed on disk while a confirmation or "Save changes?" dialog is open
+  no longer reloads underneath it, so answering OK can't apply an edit built on the old profile
+  and drop the reload. The change is noticed right after the dialog closes.
 - Config app: a MIDI port the field refuses (an empty name) now counts as an unsaved change:
   the title shows the `•`, quitting and Open ask first, and Save says "Fix the MIDI port before
   saving" instead of writing the old port under a field that showed something else.

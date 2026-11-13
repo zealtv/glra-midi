@@ -446,6 +446,30 @@ class DiskChangeTests(ControllerCase):
         self.assertFalse(self.c.dirty)
         self.assertEqual(self.c.diskMessage, "")
 
+    def test_a_poll_waits_while_a_confirm_is_open(self):
+        # Review 9: with no unsaved edits, a reload under an open dialog let "OK" apply an edit
+        # built on the old profile and drop the reload.
+        self.c.removeLayer(1)  # layer 1 holds events: asks first
+        self.assertEqual(len(self.rec.confirm), 1)
+        self.touch_disk("default", self.edited_text())
+        self.c.poll()
+        self.assertEqual(self.c.profile.layer_names[0], "Drums")  # not reloaded under the dialog
+        self.c.resolveConfirm(True)
+        self.assertEqual(self.c.layerCount, 3)
+        self.c.poll()  # the change is still noticed; the edit is unsaved, so it asks
+        self.assertIn("changed on disk", self.c.diskMessage)
+
+    def test_a_poll_waits_while_the_unsaved_prompt_is_open(self):
+        self.c.setChannel(5)
+        self.c.requestQuit()
+        self.assertEqual(len(self.rec.unsaved), 1)
+        self.touch_disk("default", self.edited_text())
+        self.c.poll()
+        self.assertEqual(self.c.diskMessage, "")
+        self.c.resolveUnsaved("cancel")
+        self.c.poll()
+        self.assertIn("changed on disk", self.c.diskMessage)
+
     def test_clean_app_follows_current_to_another_profile(self):
         write_profile(self.home, "other", NOTHING)
         prof.set_current("other", self.home)
