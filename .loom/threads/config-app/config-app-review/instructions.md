@@ -14,3 +14,8 @@ Save `review.md` here: the commit read, findings ranked with `file:line`. The
 manager turns the ones that should be fixed before the tour into small
 stitches queued ahead of `config-app-tour` (and anchors the tour on them), and
 lists the rest in the tour for Bob.
+
+Orchestrator note (2026-11-13, landing `lighting-modes`): `lighting.apply`
+widens the vendored `device/lighting.py` firmware and PID allowlists for the
+length of one write, under a lock, rather than editing vendored code (see
+`lighting-modes.tied/report.md`). Judge whether that is the right shape.
