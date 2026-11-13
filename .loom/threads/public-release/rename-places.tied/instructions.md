@@ -34,3 +34,15 @@ Bob present: it moves the working folder under any running session.
   Support), then tie this stitch and go on to `first-release` with Bob.
 - Small leftover from the audit: the tracked `inbox` symlink dangles in a fresh
   clone (`.nest/in/` has no tracked file). Harmless.
+
+## Done (Claude, fresh session in ~/repos/glra-midi, 2026-11-13)
+
+- Bob moved the folder and the Claude project history
+  (`~/.claude/projects/-Users-bob-repos-glra-midi`; no `glra-osc` project dir left).
+- Step 4: `.venv` rebuilt with python3.14; `./test.sh` passed (ruff, 590 tests OK);
+  `glra-midi --version` printed `glra-midi 0.0.1`.
+- Step 5: `repo-check` reported `ok`. `glra-midi lights` (read-only) printed
+  the migration line and moved `~/Library/Application Support/glra-osc` to
+  `.../glra-midi` (`profiles/default.toml`, `current` = `default`, backups, logs).
+  The pad wasn't plugged in at the time ("found 0" interfaces), so no pad read
+  got checked here.
