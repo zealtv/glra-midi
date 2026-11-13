@@ -41,6 +41,20 @@ From another agent's report, which Bob pasted on 2026-11-13
   continuity trace of `J1` to `U1`'s pins; ask the vendor whether a
   ZC-Writer can read back a protected part. Still never connect anything to
   `J1` until Bob okays that specific step.
+- Second search, same outside agent, 2026-11-13
+  (`lore:2026-11-13-further-chip-findings-m9f9520`; one search's findings, not
+  reproduced by us): a Masses Chip "FLASH MCU Selection Catalogue (2025)" PDF
+  (hosted on `redmine.kw-chip.com`) has an `M9F9520` row: 32 KB flash, 2 KB RAM
+  nominal (ZXW says 2216 bytes), 44 I/O, 15-level hardware stack, three 16-bit
+  timers, eight 8-bit PWM, USB 2.0, 2.2–5.5 V, 48 pins. Still no datasheet,
+  pinout or programming manual found at Masses Chip, ZXW or the archive
+  holding the catalogue; `M9F951` differs in stack, I/O and peripherals, so
+  don't borrow its pinout or programming steps. Next route the report
+  suggests: ask Masses Chip (`cs@masses-chip.com`, +86 551 65336515) for the
+  datasheet with pin definitions, programming interface, tools and whether a
+  programmer can read back existing flash. A Chinese draft sits in the lore
+  item. Nobody has sent it as of 2026-11-13; Bob decides whether and when.
+  Open: whether `SDC32K 952CCU6` is `M9F9520` at all.
 - Search terms: `M9F9520`, `M9F951`, `M9F9800`, `ZC-Writer`, `ZC-LINK`,
   "磐芯 单片机", "卓芯微 M9F", "M9F951 数据手册".
 

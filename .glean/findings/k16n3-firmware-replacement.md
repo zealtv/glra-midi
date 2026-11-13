@@ -18,6 +18,8 @@ When considering custom firmware, QMK/Vial, flashing, the vendor updater (`55`/`
 - M9F951
 - Masses Chip
 - ZXW
+- selection catalogue
+- cs@masses-chip.com
 
 ## Context
 As of the 2026-11-13 desk study (`loom:firmware-feasibility`,
@@ -33,6 +35,21 @@ Bob's photos (`lore:2026-11-13-k16n3-board-photos`):
   an `M9F951`, which matches the updater's `951` / `9520` names. If a datasheet
   and a read-capable programmer turn up, the "no backup" point below may change.
   Tracked in `loom:firmware-approaches` (under `custom-firmware`, parked by Bob on 2026-11-13).
+- A second search by the same outside agent (2026-11-13,
+  `lore:2026-11-13-further-chip-findings-m9f9520`, not reproduced by us) reports
+  a Masses Chip "FLASH MCU Selection Catalogue (2025)" PDF listing `M9F9520`
+  (and `M9F951`, `M9F9800`): 32 KB flash, 2 KB RAM nominal (ZXW's page says
+  2216 bytes), 44 I/O, 15-level hardware stack, three 16-bit timers, eight 8-bit
+  PWM outputs, USB 2.0, 2.2–5.5 V, 48 pins. The same search found no `M9F9520`
+  datasheet, pinout or programming manual (Masses Chip downloads, ZXW's
+  downloads page and the document archive holding the catalogue all lack one),
+  and warns that `M9F951` differs in stack depth, I/O and peripherals, so its
+  pinout and programming procedure shouldn't stand in for `M9F9520`'s. It
+  drafted a Chinese enquiry to `cs@masses-chip.com` (datasheet, pin
+  definitions, programming interface, tools, flash readback); as of 2026-11-13
+  nobody has sent it, and sending stays Bob's call. Nothing yet confirms that
+  `SDC32K 952CCU6` is `M9F9520` silicon: settle that before any programmer
+  touches `J1`.
 - The vendor images decode as an unidentified 16-bit-word ISA (not 8051, ARM
   or RISC-V; the worker's reading). No datasheet, compiler or open-firmware
   support found.

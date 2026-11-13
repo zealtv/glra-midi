@@ -6,7 +6,7 @@ Masses Chip — FLASH MCU Selection Catalogue (2025)
 
 Original manufacturer document · 1 page · 190 KB
 
-[Open the original PDF](https://redmine.kw-chip.com/attachments/download/463/%E7%A3%90%E8%8A%AF%E7%94%B5%E5%AD%90FLASH%E9%80%89%E5%9E%8B%E7%9B%AE%E5%BD%952025.pdf?utm_source=chatgpt.com)
+[Open the original PDF](https://redmine.kw-chip.com/attachments/download/463/%E7%A3%90%E8%8A%AF%E7%94%B5%E5%AD%90FLASH%E9%80%89%E5%9E%8B%E7%9B%AE%E5%BD%952025.pdf)
 
 The catalogue explicitly lists the M9F9520 in its USB MCU family, alongside the M9F951 and M9F9800.&#x20;
 
@@ -39,13 +39,13 @@ I checked the following sources:
 
 | Source                                                                                                             | Result                                                                     |
 | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| [Masses Chip official downloads](https://www.masses-chip.com/c/xzzq?utm_source=chatgpt.com)                        | Other MCU specifications available, but no indexed M9F9520 datasheet       |
-| [ZXW MCU downloads](https://zxw-chip.com/file/15?utm_source=chatgpt.com)                                           | Page explicitly says 暂无附件 — no attachments                                 |
-| [Shenzhen Gaoxin document archive](https://redmine.kw-chip.com/projects/chip-doc/documents?utm_source=chatgpt.com) | Found the selection catalogue, but no full M9F9520 datasheet               |
+| [Masses Chip official downloads](https://www.masses-chip.com/c/xzzq)                        | Other MCU specifications available, but no indexed M9F9520 datasheet       |
+| [ZXW MCU downloads](https://zxw-chip.com/file/15)                                           | Page explicitly says 暂无附件 — no attachments                                 |
+| [Shenzhen Gaoxin document archive](https://redmine.kw-chip.com/projects/chip-doc/documents) | Found the selection catalogue, but no full M9F9520 datasheet               |
 | Chinese and English datasheet searches                                                                             | No verified M9F9520 pinout, programming manual or complete datasheet found |
 | GitHub, distributor and alternative document searches                                                              | No verified matching datasheet                                             |
 
-The closest related product with publicly described technical details is the [M9F951](https://www.masses-chip.com/2291.html?utm_source=chatgpt.com). But the selection catalogue shows that these chips have different stack depths, I/O counts and peripherals. We shouldn't assume their pinouts or programming procedures are interchangeable.
+The closest related product with publicly described technical details is the [M9F951](https://www.masses-chip.com/2291.html). But the selection catalogue shows that these chips have different stack depths, I/O counts and peripherals. We shouldn't assume their pinouts or programming procedures are interchangeable.
 
 ## The best next route
 
