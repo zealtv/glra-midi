@@ -643,3 +643,54 @@ class NoDeviceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HidapiThreadTests(unittest.TestCase):
+    """`import hid` must happen on the thread that builds a `RealPad`, never on the pad worker
+    (`fix-quit-crash`): hidapi ties its macOS IOHIDManager to the importing thread's run loop,
+    and closing it from the main thread at exit crashes when that thread is gone. A stand-in
+    `hid` module records which thread imported it; no real HID."""
+
+    def setUp(self):
+        forbid_real_device(self)
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        (Path(tmp.name) / "hid.py").write_text(
+            "import threading\nimport builtins\n"
+            "builtins._hid_import_threads = getattr(builtins, '_hid_import_threads', [])\n"
+            "builtins._hid_import_threads.append(threading.get_ident())\n",
+            encoding="utf-8",
+        )
+        import builtins
+        import sys
+
+        self.builtins = builtins
+        builtins._hid_import_threads = []
+        saved = sys.modules.pop("hid", None)
+        sys.path.insert(0, tmp.name)
+
+        def restore():
+            sys.path.remove(tmp.name)
+            sys.modules.pop("hid", None)
+            if saved is not None:
+                sys.modules["hid"] = saved
+            del builtins._hid_import_threads
+
+        self.addCleanup(restore)
+
+    def test_making_a_realpad_imports_hid_on_the_calling_thread(self):
+        pads.RealPad()
+        self.assertEqual(self.builtins._hid_import_threads, [threading.get_ident()])
+
+    def test_a_later_import_on_the_worker_finds_it_already_loaded(self):
+        pads.RealPad()
+        worker = threading.Thread(target=lambda: __import__("hid"))
+        worker.start()
+        worker.join()
+        self.assertEqual(self.builtins._hid_import_threads, [threading.get_ident()])
+
+    def test_a_missing_hid_module_is_left_for_read_to_report(self):
+        import sys
+
+        with mock.patch.dict(sys.modules, {"hid": None}):  # makes `import hid` raise ImportError
+            pads.RealPad()  # must not raise

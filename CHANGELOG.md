@@ -41,6 +41,10 @@ release.
 - Config app: a MIDI port the field refuses (an empty name) now counts as an unsaved change:
   the title shows the `•`, quitting and Open ask first, and Save says "Fix the MIDI port before
   saving" instead of writing the old port under a field that showed something else.
+- Config app: quitting no longer ends with a "Python quit unexpectedly" crash report on macOS.
+  hidapi was first loaded on the pad worker thread, and at exit its shutdown hook closed the
+  device manager against that thread's already-gone run loop. The app now loads it on the main
+  thread when it starts.
 - Config app: removing a layer now renumbers the `layer-set` keys that point above it, so
   each keeps reaching the same layer, and flags a key that pointed at the removed layer in the
   Problems list (it shows as `→ L?` until you pick another layer). Before, such keys kept their
