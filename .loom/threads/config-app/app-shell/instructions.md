@@ -17,10 +17,15 @@ venv ran PySide6 6.10.2 on Python 3.14.
 - Layer tabs: Global, then 1..n; add, remove (asks when the layer holds
   events), rename (§4.7). Selecting a tab shows that whole layer.
 - Selecting a control highlights it and opens an (empty for now) inspector area.
-- File: opens the user's profile (creating it from the default on first save),
-  Open…, Save, Save As…, Revert; a dirty marker; unsaved-changes prompt on quit;
-  reload when the file changes on disk (§4.8). Opening a legacy mapping says
-  it will be saved as a profile.
+- File (§4.8; Bob, 2026-11-13, Q7): starts on `profile.current_profile_path()`
+  (the helper creates `profiles/default.toml` when there is none, so nothing
+  starts dirty); the window title names the profile, with a dirty marker.
+  Open… lists the profiles in the profiles folder and calls `set_current`;
+  Save As… asks for a name, writes `profiles/<name>.toml` and calls
+  `set_current`; Save, Revert; unsaved-changes prompt on quit, Open… and
+  Revert; reload when the file or `current` changes on disk. Files outside the
+  folder don't open from the app. There is no legacy mapping path (Q1: hard
+  break), so no "legacy" notice either.
 - No device access at all in this stitch.
 - Light and dark, following glra-studio's approach.
 

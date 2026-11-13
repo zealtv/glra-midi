@@ -6,7 +6,7 @@ Suggested model: Opus, in a fresh session (not the manager's context).
 Review-only: everything this thread added since the commit that created it.
 Look hardest at: engine state across layer changes and reloads; glide timing
 and stuck values; that nothing can write to the pad except the explicit
-lighting Apply; profile round-trip and legacy loading; QML holding logic it
+lighting Apply; profile round-trip, the profiles folder and `current` pointer (never rewritten, atomic), and that old mapping files fail cleanly; QML holding logic it
 shouldn't; the app against `docs/config-app.md` and against Bob's brief
 (`lore:2026-11-13-config-app-brief`), line by line.
 
