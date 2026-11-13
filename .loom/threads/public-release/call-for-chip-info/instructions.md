@@ -17,3 +17,9 @@ request, and readers who know something answer in a public place.
   opens it with Bob's go-ahead.
 - Bob to confirm at review: the wording, and whether to name Masses Chip's
   contact.
+
+Orchestrator note (2026-11-13): `rename-code` runs at the same time. Call the
+project glra-midi in new text and link `https://github.com/zealtv/glra-midi`;
+keep your README and AGENTS.md edits to one short added section each so the
+merge stays simple. Facts: `glean:k16n3-firmware-replacement`,
+`lore:2026-11-13-further-chip-findings-m9f9520`, `.glean/findings/INDEX.md`.
