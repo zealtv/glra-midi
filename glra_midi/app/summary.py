@@ -15,6 +15,7 @@ from ..profile import (
     CcRelative,
     CcSet,
     CcStep,
+    NO_LAYER,
     LayerDec,
     LayerInc,
     LayerSet,
@@ -74,6 +75,8 @@ def summarize(event, default_channel=1, layer_names=(), note_names=True):
             _join(f"{event.ease_ms} ms" if event.ease_ms else "", ch),
         )
     if isinstance(event, LayerSet):
+        if event.layer == NO_LAYER:
+            return "→ L?", "removed"
         name = layer_names[event.layer - 1] if 0 < event.layer <= len(layer_names) else ""
         return f"→ L{event.layer}", name
     if isinstance(event, LayerInc):

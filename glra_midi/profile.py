@@ -121,8 +121,14 @@ class CcStep:
 
 @dataclass(frozen=True)
 class LayerSet:
+    """`layer` is `NO_LAYER` (0) only in a profile being edited, after `remove_layer` took the
+    layer the key pointed at; `validate` flags it and a file with it can't be saved."""
+
     kind: ClassVar[str] = "layer-set"
     layer: int
+
+
+NO_LAYER = 0  # a `layer-set` key whose layer was removed (see `remove_layer`)
 
 
 @dataclass(frozen=True)
@@ -661,6 +667,14 @@ def validate(profile):
         if name not in CONTROL_NAMES:
             problems.append(Problem(name, f"{name}: unknown control"))
             continue
+        if isinstance(control, LayerSet) and control.layer == NO_LAYER:
+            problems.append(
+                Problem(
+                    name,
+                    f"{name}.layer: the layer it pointed at was removed; choose another layer",
+                )
+            )
+            continue
         try:
             _parse_control(_control_data(control), name, profile.layer_count)
         except ProfileError as err:
@@ -1003,9 +1017,10 @@ def add_layer(profile, name=""):
 
 def remove_layer(profile, layer):
     """Remove `layer`: its events are discarded (reported), the layers above it move down one.
-    Per-layer controls left with no events disappear. Layer keys that point past the new count
-    are left as they are for `validate` to flag, not silently changed (design 4.7). At least
-    one layer always remains."""
+    Per-layer controls left with no events disappear. `layer-set` keys follow their layer: one
+    pointing above `layer` drops by one, so it still reaches the same layer; one pointing at
+    `layer` itself becomes `LayerSet(NO_LAYER)`, which `validate` flags (design 4.7, Bob's P1
+    answer of 2026-11-13). At least one layer always remains."""
     if profile.layer_count <= MIN_LAYERS:
         raise ProfileError("layers.count: at least one layer must remain")
     if layer is None:
@@ -1013,6 +1028,8 @@ def remove_layer(profile, layer):
     _check_layer(profile, "layers", layer)
     controls, lost = {}, []
     for name, control in profile.controls.items():
+        if isinstance(control, LayerSet) and _is_int(control.layer) and control.layer >= layer:
+            control = LayerSet(layer=NO_LAYER if control.layer == layer else control.layer - 1)
         if not isinstance(control, PerLayer):
             controls[name] = control
             continue

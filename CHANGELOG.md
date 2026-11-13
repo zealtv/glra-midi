@@ -12,6 +12,13 @@ release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Config app: removing a layer now renumbers the `layer-set` keys that point above it, so
+  each keeps reaching the same layer, and flags a key that pointed at the removed layer in the
+  Problems list (it shows as `→ L?` until you pick another layer). Before, such keys kept their
+  number and silently went to a different layer.
+
 ## [0.1.0] - 2026-11-13
 
 First public release. The project began as `glra-osc` and was renamed

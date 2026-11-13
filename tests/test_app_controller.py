@@ -247,7 +247,31 @@ class LayerEditTests(ControllerCase):
         self.assertEqual(c.layerCount, 1)
         self.assertIn("at least one", c.error)
 
-    def test_layer_key_left_pointing_past_the_count_is_flagged_and_blocks_save(self):
+    def test_layer_keys_follow_their_layer_when_one_below_is_removed(self):
+        controls = dict(self.c.profile.controls)
+        controls["enc.3.push"] = prof.LayerSet(layer=4)
+        self.c._edit(replace(self.c.profile, controls=controls))
+        self.c.removeLayer(3)  # empty
+        self.assertEqual(self.c.profile.controls["enc.3.push"], prof.LayerSet(layer=3))
+        self.assertEqual(self.c.problems, [])
+
+    def test_layer_key_pointing_at_the_removed_layer_is_flagged_and_blocks_save(self):
+        controls = dict(self.c.profile.controls)
+        controls["enc.3.push"] = prof.LayerSet(layer=3)
+        self.c._edit(replace(self.c.profile, controls=controls))
+        self.c.removeLayer(3)  # empty: goes straight through
+        self.assertEqual(len(self.c.problems), 1)
+        self.assertIn("Dial 3 push", self.c.problems[0]["message"])
+        self.assertIn("the layer it pointed at was removed", self.c.problems[0]["message"])
+        self.assertEqual(self.c.problems[0]["control"], "enc.3.push")
+        self.assertFalse(self.c.canSave)
+        # choosing another layer clears it
+        self.c.selectControl("enc.3.push")
+        self.c.setLayerKey("layer-set", 2)
+        self.assertEqual(self.c.problems, [])
+        self.assertTrue(self.c.canSave)
+
+    def test_removing_the_last_layer_flags_a_key_that_pointed_at_it(self):
         self.c.selectTab(4)
         controls = dict(self.c.profile.controls)
         controls["enc.3.push"] = prof.LayerSet(layer=4)
@@ -255,9 +279,7 @@ class LayerEditTests(ControllerCase):
         self.assertEqual(self.c.problems, [])
         self.c.removeLayer(4)  # empty: goes straight through
         self.assertEqual(len(self.c.problems), 1)
-        self.assertIn("Dial 3 push", self.c.problems[0]["message"])
-        self.assertIn("layer 4 doesn't exist", self.c.problems[0]["message"])
-        self.assertEqual(self.c.problems[0]["control"], "enc.3.push")
+        self.assertIn("the layer it pointed at was removed", self.c.problems[0]["message"])
         self.assertFalse(self.c.canSave)
         self.c.saveProfile()
         self.assertTrue(self.c.dirty)

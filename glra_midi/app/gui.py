@@ -78,7 +78,12 @@ def _problems(window, controller):
     controls = dict(profile.controls)
     controls["enc.3.push"] = prof.LayerSet(layer=5)
     controller._edit(replace(profile, controls=controls))
-    controller.removeLayer(5)  # empty, so it goes: the layer key now points past the count
+    controller.removeLayer(5)  # empty, so it goes: the layer key lost its layer and is flagged
+
+
+def _problem_selected(window, controller):
+    _problems(window, controller)
+    controller.selectControl("enc.3.push")
 
 
 def _empty(window, controller):
@@ -207,6 +212,7 @@ STATES = {
     "device-orientation-bottom": _panel(orientation="dials-bottom"),
     "device-orientation-left": _panel(orientation="dials-left"),
     "problems": _problems,
+    "problem-selected": _problem_selected,
     "dialog-unsaved": _unsaved,
     "dialog-remove-layer": _remove_layer,
     "dialog-open": _dialog("openDialog", "openList"),

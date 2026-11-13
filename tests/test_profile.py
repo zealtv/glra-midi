@@ -17,6 +17,7 @@ from glra_midi.profile import (
     LayerDec,
     LayerInc,
     LayerSet,
+    NO_LAYER,
     Lighting,
     Note,
     PerLayer,
@@ -1078,14 +1079,44 @@ class EditLayerTests(unittest.TestCase):
         self.assertEqual(remove_layer(p, 1).profile.controls["key.1"], PerLayer.of({2: Note(note=3)}))
         self.assertEqual(remove_layer(p, 3).profile.controls["key.1"], PerLayer.of({1: Note(note=1)}))
 
-    def test_remove_layer_leaves_layer_keys_for_validate_to_flag(self):
-        p = Profile(layer_count=3, layer_names=("",) * 3, controls={"key.1": LayerSet(layer=3)})
-        q = remove_layer(p, 1).profile
-        self.assertEqual(q.controls["key.1"], LayerSet(layer=3))  # not silently changed
+    def test_remove_layer_renumbers_layer_keys_above_it(self):
+        p = Profile(
+            layer_count=4,
+            layer_names=("",) * 4,
+            controls={
+                "key.1": LayerSet(layer=1),
+                "key.2": LayerSet(layer=3),
+                "key.3": LayerSet(layer=4),
+                "key.4": LayerInc(),
+            },
+        )
+        q = remove_layer(p, 2).profile
+        self.assertEqual(
+            [q.controls[n] for n in ("key.1", "key.2", "key.3", "key.4")],
+            [LayerSet(layer=1), LayerSet(layer=2), LayerSet(layer=3), LayerInc()],
+        )
+        self.assertEqual(validate(q), [])
+        self.assertEqual(parse_profile(dumps_profile(q)), q)
+
+    def test_remove_layer_flags_layer_keys_that_pointed_at_it(self):
+        p = Profile(
+            layer_count=3,
+            layer_names=("",) * 3,
+            controls={"key.1": LayerSet(layer=2), "key.2": LayerSet(layer=3)},
+        )
+        q = remove_layer(p, 2).profile
+        self.assertEqual(q.controls["key.1"], LayerSet(layer=NO_LAYER))
+        self.assertEqual(q.controls["key.2"], LayerSet(layer=2))  # followed its layer
         problems = validate(q)
         self.assertEqual(len(problems), 1)
         self.assertEqual(problems[0].control, "key.1")
-        self.assertIn("layer 3 doesn't exist (count = 2)", problems[0].message)
+        self.assertIn("key.1.layer: the layer it pointed at was removed", problems[0].message)
+
+    def test_remove_layer_still_flags_a_key_already_past_the_count(self):
+        p = Profile(layer_count=3, layer_names=("",) * 3, controls={"key.1": LayerSet(layer=5)})
+        q = remove_layer(p, 1).profile
+        self.assertEqual(q.controls["key.1"], LayerSet(layer=4))
+        self.assertIn("layer 4 doesn't exist (count = 2)", validate(q)[0].message)
 
     def test_at_least_one_layer_remains(self):
         p = Profile(layer_count=1, layer_names=("",))

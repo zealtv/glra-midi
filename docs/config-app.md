@@ -637,8 +637,11 @@ other layers silently. (Q5.)
 - `[+]` adds a layer (up to 8), empty. Right-click (or the Rename… button) on a
   tab: Rename, Remove. Remove asks when the layer holds any event ("Layer 3
   has 5 events. Remove it?"), drops its events, and renumbers the layers
-  above it down by one; `layer-set` keys pointing above the new count are
-  flagged (below) rather than silently changed.
+  above it down by one. `layer-set` keys follow their layer: a key pointing
+  above the removed layer drops by one (so "layer-set 3" keeps reaching the
+  content that was on layer 3), and a key pointing at the removed layer is
+  flagged in Problems (below) until the user picks another layer. Bob chose
+  this over leaving keys alone (P1, 2026-11-13).
 - At least one layer always remains.
 - The app's shown tab doesn't change the engine's active layer; the app plays
   nothing (reading 6).
