@@ -4,7 +4,7 @@ Host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI
 controller (OSC later). It builds on [glra-studio](https://github.com/imolitor/glra-studio)
 for device I/O.
 
-**Status:** pre-alpha, but working; first release 0.1.0 (2026-11-13). As of 2026-11-13 `glra-midi run` plays a profile (layers, per-layer channels, notes, CCs with glides) on a virtual MIDI port and silences the pad so it doesn't type into apps, and `glra-midi config` is an app that edits those profiles and picks the pad's factory RGB mode and orientation. Bob tried the app on 2026-11-13 and judged it "working well enough for a first release". macOS only. OSC output doesn't exist yet. Planned work lives on the loom (`.loom/`).
+**Status:** pre-alpha, but working; first release 0.1.0 and patch 0.1.1 (both 2026-11-13). As of 2026-11-13 `glra-midi run` plays a profile (layers, per-layer channels, notes, CCs with glides) on a virtual MIDI port and silences the pad so it doesn't type into apps, and `glra-midi config` is an app that edits those profiles and picks the pad's factory RGB mode and orientation. Bob tried the app on 2026-11-13 and judged it "working well enough for a first release". macOS only. OSC output doesn't exist yet. Planned work lives on the loom (`.loom/`).
 
 ## Install and run
 

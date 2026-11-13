@@ -12,6 +12,10 @@ release.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-13
+
+Fixes from Bob's tour of the configuration app, after 0.1.0.
+
 ### Changed
 
 - Profile files are stricter about two spellings that used to load. A control or layer table
