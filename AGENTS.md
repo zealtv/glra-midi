@@ -1,6 +1,6 @@
 # Working notes for agents
 
-glra-osc: host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI controller (OSC later), building on the peer repo `../glra-studio`. A development repo; as of 2026-11-13 the MIDI MVP (`midi-mvp`) is tied, `config-app` (a configuration app: layers, events, factory RGB mode, orientation) is queued for an unattended orchestrator run (`.loom/threads/config-app/orchestrator.md`), and `custom-firmware` and `backlog` (`osc-io`, `midi-feedback`) are parked. Bob, 2026-11-13: after the config-app tour the repo becomes glra-midi with a public release and a versioning and release process (`.loom/threads/public-release/`, off the queue).
+glra-osc: host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI controller (OSC later), building on the peer repo `../glra-studio`. A development repo; as of 2026-11-13 the MIDI MVP (`midi-mvp`) is tied, `config-app` (a configuration app: layers, events, factory RGB mode, orientation) is built and waits on Bob's tour (`.loom/threads/config-app/config-app-tour/tour.md`), and `custom-firmware` and `backlog` (`osc-io`, `midi-feedback`) are parked. Bob, 2026-11-13: after the config-app tour the repo becomes glra-midi with a public release and a versioning and release process (`.loom/threads/public-release/`, off the queue).
 
 `CLAUDE.md` is a symlink to this file, so every agent runtime reads the same notes.
 

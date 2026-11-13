@@ -4,16 +4,15 @@ Host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI
 controller (OSC later). It builds on [glra-studio](https://github.com/imolitor/glra-studio)
 for device I/O.
 
-**Status:** pre-alpha, but working. As of 2026-11-12 `glra-osc run` sends the pad's
-16 keys and 3 encoders as MIDI on a virtual port and silences the pad so it doesn't
-type into apps; Bob checked it with a DAW the same day. OSC output doesn't exist yet.
-Planned work lives on the loom (`.loom/`); as of 2026-11-12 the MIDI MVP is done.
+**Status:** pre-alpha, but working. As of 2026-11-13 `glra-osc run` plays a profile (layers, per-layer channels, notes, CCs with glides) on a virtual MIDI port and silences the pad so it doesn't type into apps, and `glra-osc config` is an app that edits those profiles and picks the pad's factory RGB mode and orientation. The configuration app and the layered engine haven't been tried at the pad yet (that's the config-app tour). OSC output doesn't exist yet. Planned work lives on the loom (`.loom/`).
 
 ## Usage
 
 macOS only. Install into a virtualenv (see "Setup and tests" below; call `.venv/bin/glra-osc` or activate it), then:
 
 ```sh
+glra-osc config               # the configuration app (needs the gui extra: pip install -e '.[gui]')
+glra-osc config --demo        # the app on a throwaway profile folder and a fake pad
 glra-osc run                  # play the current profile on the virtual MIDI port "GLRA K16"
 glra-osc run --dry-run        # print pad events, layer changes and MIDI instead of sending it
 glra-osc run --config my.toml # play this profile file instead
@@ -22,6 +21,12 @@ glra-osc monitor --raw        # ...plus each raw report as hex
 glra-osc monitor --profile p.toml  # number events as displayed in the profile's [pad] orientation
 glra-osc unsilence            # remove glra-osc's key-mapping entries from the pad
 ```
+
+- **The configuration app.** `glra-osc config` (or `glra-osc-config`) edits the current profile: layer tabs (Global, 1..n), the pad drawn in its orientation, an inspector for the selected key or dial, and a device panel for orientation, port, channel and the factory RGB mode. Lighting reaches the pad only when you press **Apply to pad**; each Apply is saved in the pad's flash. Design: `docs/config-app.md` §4.
+
+  ![Layer tab](docs/images/config-app-layer-tab.png)
+  ![Inspector](docs/images/config-app-inspector.png)
+  ![Device panel](docs/images/config-app-device-panel.png)
 
 - **Profile.** `run` plays a profile: a TOML file (`version = 1`) that says what each key,
   dial push and dial turn does, per layer or on every layer. Without `--config` it plays the
