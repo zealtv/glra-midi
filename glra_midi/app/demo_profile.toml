@@ -1,4 +1,4 @@
-# Fixture for `glra-osc config --demo` and the captures: the docs/config-app.md 2.5 example.
+# Fixture for `glra-midi config --demo` and the captures: the docs/config-app.md 2.5 example.
 version = 1
 
 [midi]

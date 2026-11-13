@@ -2,7 +2,7 @@
 
 """The profile: layers, events, lighting and orientation, as one TOML file.
 
-A profile is what the configuration app edits and `glra-osc run` plays; the format
+A profile is what the configuration app edits and `glra-midi run` plays; the format
 is specified in `docs/config-app.md` section 2 and documented in
 `default_profile.toml`. This module is pure: no I/O beyond reading and writing the
 file, no MIDI, no device.
@@ -42,9 +42,10 @@ from typing import ClassVar
 import tomli_w
 
 PROFILE_VERSION = 1
-# Application Support directory name. One constant, so the glra-midi rename touches one
-# line (docs/config-app.md section 2, Q9).
-APP_DIR_NAME = "glra-osc"
+# Application Support directory name, from one constant (docs/config-app.md section 2, Q9).
+APP_DIR_NAME = "glra-midi"
+# The folder's name before the 2026-11-13 rename; `migrate_app_dir` moves it across.
+OLD_APP_DIR_NAME = "glra-osc"
 PROFILES_DIR_NAME = "profiles"
 CURRENT_FILE_NAME = "current"
 DEFAULT_PROFILE_NAME = "default"
@@ -315,13 +316,31 @@ TURN_KINDS = ("cc-relative", "cc-absolute")
 
 def default_profile_path():
     """The shipped default profile (read-only package data)."""
-    return Path(str(resources.files("glra_osc").joinpath("default_profile.toml")))
+    return Path(str(resources.files("glra_midi").joinpath("default_profile.toml")))
 
 
 def app_dir(home=None):
     """The application folder: `~/Library/Application Support/<APP_DIR_NAME>/` (design 2)."""
     home = Path.home() if home is None else Path(home)
     return home / "Library" / "Application Support" / APP_DIR_NAME
+
+
+def migrate_app_dir(home=None):
+    """Move the pre-rename `glra-osc` folder (profiles, `current`, backups, logs) to `app_dir`.
+
+    Only when the new folder doesn't exist and the old one does (Bob, 2026-11-13, Q9), so it
+    happens at most once. Returns a one-line message after a move, else None. An `OSError`
+    from the move is returned as a message too, leaving both folders as they were.
+    """
+    new = app_dir(home)
+    old = new.with_name(OLD_APP_DIR_NAME)
+    if new.exists() or new.is_symlink() or not old.is_dir():
+        return None
+    try:
+        old.rename(new)  # same parent folder, so one atomic rename
+    except OSError as exc:
+        return f"glra-midi: could not move {old} to {new}: {exc}"
+    return f"glra-midi: moved {old} to {new} (the project is now named glra-midi)"
 
 
 def profiles_dir(home=None):
@@ -359,7 +378,7 @@ def _read_current(home):
 
 
 def current_profile_path(home=None):
-    """The file the app and `glra-osc run` play: `profiles/<name>.toml` for the name in
+    """The file the app and `glra-midi run` play: `profiles/<name>.toml` for the name in
     `current`. When `current` is missing, empty, invalid or names a file that doesn't exist,
     fall back to `profiles/default.toml`, creating it from the shipped default if it is
     missing (an existing file is never overwritten). `current` is written (as `default`) only
@@ -569,7 +588,7 @@ def _build(data):
     version = data["version"]
     if version != PROFILE_VERSION or isinstance(version, bool):
         raise ProfileError(
-            f"version: this glra-osc reads version {PROFILE_VERSION}, got {version!r}"
+            f"version: this glra-midi reads version {PROFILE_VERSION}, got {version!r}"
         )
     port, channel = _parse_port_channel(data)
     orientation = _parse_orientation(data)
@@ -753,8 +772,8 @@ def _profile_data(profile):
 
 _ARRAY = re.compile(r"\[\n((?:    [^\n]*,\n)+)\]")
 HEADER = (
-    "# glra-osc profile (written by glra-osc). The format is documented in\n"
-    "# glra_osc/default_profile.toml; control names are physical, whatever the orientation.\n"
+    "# glra-midi profile (written by glra-midi). The format is documented in\n"
+    "# glra_midi/default_profile.toml; control names are physical, whatever the orientation.\n"
 )
 
 

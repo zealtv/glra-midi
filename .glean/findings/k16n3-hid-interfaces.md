@@ -40,6 +40,6 @@ passes (dead switch or missed prompt; unresolved as of 2026-11-12).
 Bob's pad reports firmware **103**, internal PID **0x2475** (glra-studio tested 100 /
 0x246D). Writes on 103 worked through glra-studio's verified path. As of
 2026-11-12 all 25 actions send unique, hidutil-remappable codes. The source of truth
-is `glra_osc/device/layout.json`. Keys are numbered from the top-left with the dials along
+is `glra_midi/device/layout.json`. Keys are numbered from the top-left with the dials along
 the top edge, and dials run 1–3 left to right. Clockwise is the reverse of glra-studio's labels.
 Restore and records: `.loom/threads/midi-mvp/unique-assignments*/`.

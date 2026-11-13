@@ -4,9 +4,9 @@
 
 import unittest
 
-from glra_osc.engine import Engine
-from glra_osc.events import ControlEvent
-from glra_osc.profile import parse_profile
+from glra_midi.engine import Engine
+from glra_midi.events import ControlEvent
+from glra_midi.profile import parse_profile
 
 
 def ev(control, action, t=0.0):

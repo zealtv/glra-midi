@@ -57,7 +57,7 @@ TYPING_WARNING = (
 
 def refusal_message(exc):
     return (
-        f"glra-osc: cannot silence the pad: {exc}\n"
+        f"glra-midi: cannot silence the pad: {exc}\n"
         "  Refusing to run, because the pad would type into the focused app.\n"
         "  Pass --allow-typing to run anyway."
     )
@@ -326,7 +326,7 @@ class Guard:
             self.silencer.restore()
         except SilenceError as exc:
             self.say(f"# WARNING: could not restore the pad's key mapping: {exc}")
-            self.say("# run `glra-osc unsilence` to remove our entries by hand")
+            self.say("# run `glra-midi unsilence` to remove our entries by hand")
         else:
             if self.active:
                 self.say("# pad mapping restored")

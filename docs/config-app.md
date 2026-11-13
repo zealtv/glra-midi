@@ -8,7 +8,7 @@ Sources: Bob's brief (`lore:2026-11-13-config-app-brief`), the eight readings
 in `.loom/threads/config-app/instructions.md` (Bob accepted them on
 2026-11-13 and corrected reading 2: "\"global\" just means it is the same on
 all layers. no fall through mechanism"), `glean:k16n3-lighting`,
-`glean:k16n3-hid-interfaces` and `glra_osc/device/layout.json` as of
+`glean:k16n3-hid-interfaces` and `glra_midi/device/layout.json` as of
 2026-11-13, and the references in
 `.loom/threads/config-app/config-design.stitching/references.md`.
 
@@ -54,11 +54,11 @@ we need with stable output.
 
 Bob, 2026-11-13 (Q7): "lets put the profile in the application folder and have
 some sort of pointer to the current one." Claude's reading, same day: the
-application folder is `~/Library/Application Support/glra-osc/` (`APP_DIR_NAME`),
+application folder is `~/Library/Application Support/glra-midi/` (`APP_DIR_NAME`),
 and it holds
 
 ```
-glra-osc/
+glra-midi/
   profiles/default.toml, drums.toml, ...   one file per profile
   current                                  one line: the active profile's name
 ```
@@ -66,7 +66,7 @@ glra-osc/
 - **A profile's name** is its file name without `.toml` (`drums`). A name is
   non-empty, at most 100 characters, with no `/`, `\` or NUL and no leading
   `.`; the window title and the pointer use it.
-- **`current`** holds one name. The app and `glra-osc run` both follow it, so
+- **`current`** holds one name. The app and `glra-midi run` both follow it, so
   switching profile in the app switches what `run` plays (the runner reloads
   when the pointer or the file it names changes).
 - **Helpers** in `profile.py`: `app_dir()`, `profiles_dir()`,
@@ -90,6 +90,14 @@ project becomes glra-midi. The folder then becomes
 existing `glra-osc` folder across (or read it as a fallback). Code should take
 the directory name from one constant so the rename touches one line. Bob on
 that plan (Q9): "sounds good."
+
+Done in `loom:rename-code` (2026-11-13): `APP_DIR_NAME` is `glra-midi`, and
+`profile.migrate_app_dir()` renames `glra-osc/` to `glra-midi/` (profiles,
+`current`, backups, logs; one atomic rename in the same folder) when the new
+folder doesn't exist and the old one does, printing one line to stderr. Every
+`glra-midi` subcommand and the app (outside `--demo`) call it before reading the
+folder; `--version` and `--help` don't. If `glra-midi/` already exists, the old
+folder is left where it is. There is no read-as-fallback.
 
 ### 2.1 Top level
 
@@ -172,7 +180,7 @@ error naming both.
 ### 2.5 A full example
 
 ```toml
-# glra-osc profile. Control names are physical (dials along the top,
+# glra-midi profile. Control names are physical (dials along the top,
 # key 1 top-left); the app shows them in your chosen orientation.
 version = 1
 
@@ -279,7 +287,7 @@ their tests when it makes that switch.
 
 ### 2.7 The default profile
 
-`glra_osc/default_profile.toml`, comments documenting the format. The app
+`glra_midi/default_profile.toml`, comments documenting the format. The app
 and `run` copy it to `profiles/default.toml` when there is no profile (2).
 
 Bob, 2026-11-13 (Q3): "three layers selected by encoder presses. all buttons
@@ -309,7 +317,7 @@ hand-edited file don't survive an app save (tomli-w writes no comments); the
 app warns once per file when the file it opened contained comments.
 
 Saving writes to a temporary file in the same directory and renames it over
-the old one, so `glra-osc run` never reads half a file.
+the old one, so `glra-midi run` never reads half a file.
 
 ### 2.9 Errors
 
@@ -447,7 +455,7 @@ named, not somewhere mid-glide.
 PySide6 6.10.2 + Qt Quick, as in `../glra-studio/macropad/` on 2026-11-13
 (`gui.py`, `qml/`, GPL-3.0-only like this repo; record what's taken in
 `THIRD_PARTY_NOTICES.md`). A `gui` extra (`PySide6==6.10.2`), entry points
-`glra-osc-config` and `glra-osc config`. The CLI imports without PySide6.
+`glra-midi-config` and `glra-midi config`. The CLI imports without PySide6.
 
 The model lives in Python: a `Controller(QObject)` holds a `profile.Profile`
 and exposes properties and slots. QML draws and calls slots; it holds no
@@ -456,9 +464,9 @@ profile logic and no summary text.
 ### 4.2 Module layout
 
 ```
-glra_osc/app/
+glra_midi/app/
   __init__.py
-  __main__.py      # python -m glra_osc.app
+  __main__.py      # python -m glra_midi.app
   gui.py           # QGuiApplication, QML engine, --demo, --capture
   controller.py    # Controller(QObject): profile, tab, selection, dirty, file ops
   summary.py       # pure: tile text for every kind (tested without Qt)
@@ -483,7 +491,7 @@ pad, inspector on the right, device panel as a collapsible strip at the
 bottom.
 
 ```
-┌─ glra-osc config — default • ───────────────────────────────────────────┐
+┌─ glra-midi config — default • ───────────────────────────────────────────┐
 │ [Open…] [Save] [Save As…] [Revert]                    Pad: connected (103) │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ ( Global ) [ 1 Drums ] ( 2 Synth ) ( 3 ) ( 4 Mixer ) [+]         [Rename…] │
@@ -643,7 +651,7 @@ Bob, Q7). Claude's reading of how the app works within that:
 - **Start:** the app opens `current_profile_path()`. When there is no
   profile, that helper creates `profiles/default.toml` from the shipped
   default, so the app starts on a saved file and nothing is dirty.
-- **Window title:** the profile's name, as in `glra-osc config — drums •`
+- **Window title:** the profile's name, as in `glra-midi config — drums •`
   (`•` marks unsaved changes).
 - **Open…** lists the profiles in `profiles/` by name (not a free file
   dialog); choosing one loads it and calls `set_current(name)`, so `run`
@@ -715,7 +723,7 @@ Collapsed it shows one line (see 4.3). Expanded:
 ### 4.12 Screenshots for review
 
 `tools/app-capture.sh <state> <out.png>` runs
-`python -m glra_osc.app --demo --capture <state> --out <out.png>` offscreen:
+`python -m glra_midi.app --demo --capture <state> --out <out.png>` offscreen:
 the app loads a fixture profile, drives the controller into the named state,
 waits for a frame, saves `QQuickWindow.grabWindow()` and exits (glra-studio's
 `gui.py` captures the same way). States are named after the wireframes above
@@ -786,7 +794,7 @@ profile."
 ### 5.3 Write policy
 
 - **One guarded write, only on [Apply to pad].** Never on drag, field change,
-  Save, Open, app start, or `glra-osc run`. *Why:* each `06 0b` persists to
+  Save, Open, app start, or `glra-midi run`. *Why:* each `06 0b` persists to
   flash (`glean:k16n3-lighting`).
 - Apply reads the pad's current 11 bytes, builds the new payload by changing
   only mode, brightness, speed, colour flag and HSV (bytes 2, 3, 4, 6, 8–10),
@@ -796,7 +804,7 @@ profile."
   readback, report. In a worker thread, as glra-studio's `worker.py` does.
 - The button disables while a write runs and for a second after.
 - Never `06 14`, never `06 12`, never past the 11 bytes.
-- `glra-osc lights` prints the pad's mode; `glra-osc lights --apply` shows the
+- `glra-midi lights` prints the pad's mode; `glra-midi lights --apply` shows the
   change and asks before the same guarded write.
 
 ---

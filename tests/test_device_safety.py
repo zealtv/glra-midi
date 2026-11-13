@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from glra_osc.device import descriptor, protocol, storage, backend
+from glra_midi.device import descriptor, protocol, storage, backend
 
 
 class Log:

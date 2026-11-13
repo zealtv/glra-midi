@@ -1,6 +1,6 @@
 # Working notes for agents
 
-glra-osc: host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI controller (OSC later), building on the peer repo `../glra-studio`. A development repo; as of 2026-11-13 the MIDI MVP (`midi-mvp`) is tied, `config-app` (a configuration app: layers, events, factory RGB mode, orientation) is built and waits on Bob's tour (`.loom/threads/config-app/config-app-tour/tour.md`), and `custom-firmware` and `backlog` (`osc-io`, `midi-feedback`) are parked. Bob, 2026-11-13: after the config-app tour the repo becomes glra-midi with a public release and a versioning and release process (`.loom/threads/public-release/`, off the queue).
+glra-midi: host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI controller (OSC later), building on the peer repo `../glra-studio`. Named glra-osc until 2026-11-13, when Bob had it renamed (`loom:public-release`); history (lore, tied and dropped stitches, nest receipts) keeps the old name as written then. A development repo; as of 2026-11-13 the MIDI MVP (`midi-mvp`) is tied, `config-app` (a configuration app: layers, events, factory RGB mode, orientation) passed Bob's tour (`.loom/threads/config-app/config-app-tour.tied/tour.md`), and `custom-firmware` and `backlog` (`osc-io`, `midi-feedback`) are parked. The public release (`.loom/threads/public-release/`: rename, release process, audit, first release 0.1.0 on GitHub) sits on the queue; the loom holds its current state.
 
 `CLAUDE.md` is a symlink to this file, so every agent runtime reads the same notes.
 
@@ -41,10 +41,10 @@ Python 3.13+ (as of 2026-11-12 Bob's only Python is `/opt/homebrew/bin/python3.1
 /opt/homebrew/bin/python3.14 -m venv .venv
 .venv/bin/pip install -e '.[dev,gui]'   # gui = PySide6 for the config app; app tests skip without it
 ./test.sh              # ruff + unittest
-.venv/bin/glra-osc --version
+.venv/bin/glra-midi --version
 ```
 
-`glra_osc/device/` holds code vendored from glra-studio (GPL-3.0-only); see its
+`glra_midi/device/` holds code vendored from glra-studio (GPL-3.0-only); see its
 `README.md` before editing it. This repo is GPL-3.0-only as a result.
 
 ## Memory lives in Glean

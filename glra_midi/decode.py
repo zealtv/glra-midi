@@ -22,7 +22,7 @@ _ROLLOVER_ERROR = 0x01  # boot-protocol "too many keys" fill
 def load_layout(path=None):
     """Load layout.json (the packaged default, or `path`)."""
     if path is None:
-        text = resources.files("glra_osc.device").joinpath("layout.json").read_text("utf-8")
+        text = resources.files("glra_midi.device").joinpath("layout.json").read_text("utf-8")
     else:
         with open(path, encoding="utf-8") as f:
             text = f.read()

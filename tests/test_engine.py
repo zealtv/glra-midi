@@ -2,9 +2,9 @@
 
 import unittest
 
-from glra_osc.engine import Engine, describe
-from glra_osc.events import ControlEvent
-from glra_osc.profile import parse_profile
+from glra_midi.engine import Engine, describe
+from glra_midi.events import ControlEvent
+from glra_midi.profile import parse_profile
 
 
 def ev(control, action, t=0.0):
@@ -349,7 +349,7 @@ class LayerTests(unittest.TestCase):
     def test_layer_set_beyond_the_count_is_ignored(self):
         from dataclasses import replace
 
-        from glra_osc.profile import LayerSet
+        from glra_midi.profile import LayerSet
 
         profile = parse_profile("version = 1\n" + LAYERS)
         controls = dict(profile.controls, **{"key.3": LayerSet(9)})

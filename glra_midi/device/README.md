@@ -1,4 +1,4 @@
-# glra_osc.device
+# glra_midi.device
 
 Vendored from [glra-studio](https://github.com/imolitor/glra-studio)
 (`macropad/`, GPL-3.0-only), source commit `33aa281`
@@ -16,14 +16,14 @@ kept as they were.
 | `learn.py` | `macropad/learn.py` | `usage_name` (needed by `model.py`); passive key capture |
 | `lighting.py` | `macropad/lighting.py` | lighting payload checks and the one guarded write (backup, write, exact readback) |
 
-Changes from upstream: none to the code (checked again for `lighting.py`, 2026-11-13). The tests import `glra_osc.device`
+Changes from upstream: none to the code (checked again for `lighting.py`, 2026-11-13). The tests import `glra_midi.device`
 instead of `macropad` (`tests/test_device_*.py`, from `tests/test_safety.py`
 and `tests/test_transactions.py`).
 
 `model.py` and `learn.py` came along because `transactions.py` imports
 `VISIBLE_SLOTS` from `model.py`, which imports `usage_name` from `learn.py`.
 `lighting.py` came in with `loom:lighting-modes` (`config-app`, 2026-11-13), from
-the same source commit. Two limits in it matter here, and `glra_osc/lighting.py`
+the same source commit. Two limits in it matter here, and `glra_midi/lighting.py`
 works around both without editing this file:
 
 - `MODES` names only 0, 1, 2 and 4 (tested on firmware 100); `validate` refuses

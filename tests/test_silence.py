@@ -5,9 +5,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from glra_osc import monitor
-from glra_osc.decode import load_layout
-from glra_osc.silence import (
+from glra_midi import monitor
+from glra_midi.decode import load_layout
+from glra_midi.silence import (
     CHECK_SECONDS,
     CONSUMER_PAGE,
     FAST_CHECK_SECONDS,

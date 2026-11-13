@@ -8,8 +8,8 @@ import unittest
 from . import qt_support  # noqa: F401 - skips this module without PySide6, sets up Qt
 from .qt_support import make_home
 
-from glra_osc import profile as prof
-from glra_osc.app.controller import Controller
+from glra_midi import profile as prof
+from glra_midi.app.controller import Controller
 
 START = """
 version = 1

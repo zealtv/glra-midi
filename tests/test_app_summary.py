@@ -4,8 +4,8 @@ import subprocess
 import sys
 import unittest
 
-from glra_osc.app import summary
-from glra_osc.profile import (
+from glra_midi.app import summary
+from glra_midi.profile import (
     CcAbsolute,
     CcMomentary,
     CcRelative,
@@ -153,7 +153,7 @@ class ImportTests(unittest.TestCase):
 
     def test_cli_and_summary_import_without_qt(self):
         code = (
-            "import sys; import glra_osc.cli, glra_osc.app, glra_osc.app.summary;"
+            "import sys; import glra_midi.cli, glra_midi.app, glra_midi.app.summary;"
             "sys.exit(1 if any(m.startswith(('PySide6', 'shiboken6')) for m in sys.modules) else 0)"
         )
         self.assertEqual(self.run_python(code).returncode, 0)
@@ -161,12 +161,12 @@ class ImportTests(unittest.TestCase):
     def test_config_says_what_to_install_when_pyside6_is_missing(self):
         code = (
             "import sys; sys.modules['PySide6'] = None; sys.modules['shiboken6'] = None\n"
-            "from glra_osc.cli import main\n"
+            "from glra_midi.cli import main\n"
             "sys.exit(main(['config']))"
         )
         result = self.run_python(code)
         self.assertEqual(result.returncode, 2)
-        self.assertIn("glra-osc[gui]", result.stderr)
+        self.assertIn("glra-midi[gui]", result.stderr)
 
 
 if __name__ == "__main__":

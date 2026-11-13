@@ -1,6 +1,6 @@
 # The pad is silenced without root by a per-device hidutil mapping to "no event"; seizing needs root and isn't used
 
-When trying to stop the pad typing into apps, editing `glra_osc/silence.py`, or seeing 0xe00002c1 / "open failed" on an exclusive open, or "Run as root to remap alphanumerics".
+When trying to stop the pad typing into apps, editing `glra_midi/silence.py`, or seeing 0xe00002c1 / "open failed" on an exclusive open, or "Run as root to remap alphanumerics".
 
 ## Triggers
 - seize
@@ -42,7 +42,7 @@ Hands-on tests, 2026-11-12, macOS 14.6, non-root:
 
 ## Outcome (2026-11-12)
 `loom:suppression-route` chose the hidutil route; `loom:silent-capture` built it in
-`glra_osc/silence.py`. `glra-osc run` and `monitor` map every layout code (25) to
+`glra_midi/silence.py`. `glra-midi run` and `monitor` map every layout code (25) to
 `0x700000000` through `hidutil property --matching {VendorID,ProductID} --set`, merged
 with the entries already on the pad's services (Bob's CapsLock→Cmd), verified by
 re-reading. They re-apply on every (re)connect from `watch(on_pad=...)`, re-verify every 100 ms for 10 s after each
@@ -50,10 +50,13 @@ connect, then every 2 s (`on_tick`, `silence.check_interval`) and re-merge ours 
 from the *current* mapping on exit/Ctrl-C/SIGTERM, and refuse to run without `--allow-typing`
 if apply or verify fails. A refusal prints the "Run as root" text to stdout with exit 1
 and applies nothing. After `kill -9` the mapping stays until replug;
-`glra-osc unsilence` removes entries whose source is ours, and a later run treats
+`glra-midi unsilence` removes entries whose source is ours, and a later run treats
 such leftovers as "not original". With no mapping, `--get` prints each service
 with an empty `( )`; with no matching service it prints nothing. The raw hidapi
 readers still see the original reports under the mapping.
+"Ours" means "source is one of the layout's codes mapped to no event": no name or tag
+enters into it, so the glra-osc → glra-midi rename (2026-11-13, checked in
+`loom:rename-code`) left a new build able to clean up entries an old build left.
 
 Revision, 2026-11-12 (Bob's live DAW test): after a replug macOS reapplied
 CapsLock→Cmd a moment after we applied ours, replacing the whole mapping (pad keys
@@ -64,7 +67,7 @@ Revision, 2026-11-12 (replug-leak-window): a 2 s re-check still let one key (Hom
 the first 10 s after each connect re-check every 100 ms (one `hidutil --get` takes about 5 ms), and `watch` rescans every 100 ms
 while the pad is absent (our first apply landed 30 ms after re-enumeration).
 
-Measured, 2026-11-12 (macOS 14.6, 20 ms poller, `loom:replug-leak-window` checks/): with no glra-osc,
+Measured, 2026-11-12 (macOS 14.6, 20 ms poller, `loom:replug-leak-window` checks/): with no glra-osc (as the tool was then named),
 macOS applies Bob's CapsLock entry once, ~1 s after the pad appears. But for **roughly the first 3 s after
 connect, macOS reverts any mapping we set**: a single set at +2.0 s was reverted 29 ms later; in a run,
 sets at +0.03/+1.2/+2.2 s were each reverted and the one at +3.2 s stuck. Each revert leaves the pad

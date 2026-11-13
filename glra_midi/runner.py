@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
-"""`glra-osc run`: pad reports -> decoder -> engine -> virtual MIDI port (or stdout).
+"""`glra-midi run`: pad reports -> decoder -> engine -> virtual MIDI port (or stdout).
 
 The rtmidi2 part is `MidiPort`, a few lines around `MidiOut`. Everything else
 is the pure engine plus the `monitor.watch` loop. Held notes are released on

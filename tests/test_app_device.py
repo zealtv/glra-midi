@@ -17,12 +17,12 @@ from .qt_support import forbid_real_device, make_home
 
 from PySide6.QtCore import QCoreApplication  # noqa: E402
 
-from glra_osc import lighting as lights
-from glra_osc import profile as prof
-from glra_osc.app import device as pads
-from glra_osc.app import devicepanel as panel
-from glra_osc.app.controller import Controller
-from glra_osc.profile import Lighting
+from glra_midi import lighting as lights
+from glra_midi import profile as prof
+from glra_midi.app import device as pads
+from glra_midi.app import devicepanel as panel
+from glra_midi.app.controller import Controller
+from glra_midi.profile import Lighting
 
 from .test_lighting import FakePad as ReaderFake  # a fake at the Reader level
 
@@ -117,7 +117,7 @@ class RealPadWiringTests(unittest.TestCase):
         def connect(directory=None):
             yield self.reader, {"serial_number": "test"}
 
-        patcher = mock.patch("glra_osc.lighting.connect", connect)
+        patcher = mock.patch("glra_midi.lighting.connect", connect)
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -130,7 +130,7 @@ class RealPadWiringTests(unittest.TestCase):
         self.assertEqual(set(self.reader.queries), {10})
 
     def test_a_failed_connect_reads_as_not_found(self):
-        with mock.patch("glra_osc.lighting.connect", side_effect=ValueError("found 0")):
+        with mock.patch("glra_midi.lighting.connect", side_effect=ValueError("found 0")):
             reading = pads.RealPad().read()
         self.assertEqual(pads.describe_reading(reading)[0], "Pad: not found")
         self.assertIn("found 0", reading.detail)
@@ -562,11 +562,11 @@ class CaptureSafetyTests(unittest.TestCase):
             "import sys\n"
             "from unittest import mock\n"
             "def refuse(*a, **k): raise AssertionError('the real device was reached')\n"
-            "import glra_osc.lighting, glra_osc.device.backend as b\n"
+            "import glra_midi.lighting, glra_midi.device.backend as b\n"
             "for target in ('enumerate_devices', 'select', 'open_device'):\n"
             "    setattr(b, target, refuse)\n"
-            "glra_osc.lighting.connect = refuse\n"
-            "from glra_osc.app import gui\n"
+            "glra_midi.lighting.connect = refuse\n"
+            "from glra_midi.app import gui\n"
             "sys.exit(gui.main(sys.argv[1:]))\n"
         )
         with tempfile.TemporaryDirectory() as tmp:
@@ -588,14 +588,14 @@ class CaptureSafetyTests(unittest.TestCase):
         self.run_capture("device-panel-no-pad")
 
     def test_make_pad_picks_the_fake_for_demo_and_the_real_one_only_otherwise(self):
-        from glra_osc.app import gui
+        from glra_midi.app import gui
 
         forbid_real_device(self)
         self.assertIsInstance(gui.make_pad(True), pads.FakePad)
         self.assertIsInstance(gui.make_pad(False), pads.RealPad)  # built, not opened
 
     def test_every_device_capture_state_is_listed(self):
-        from glra_osc.app import gui
+        from glra_midi.app import gui
 
         names = [n for n in gui.STATES if n.startswith("device-")]
         self.assertGreaterEqual(len(names), 10)

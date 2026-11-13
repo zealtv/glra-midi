@@ -5,7 +5,7 @@
 Sources: `glean:k16n3-lighting` (probed on Bob's pad, firmware 103, 2026-11-13) and
 `docs/config-app.md` section 5. Every `06 0b` write persists to flash, so nothing in this
 module writes unless `apply` is called, and `apply` is called only on an explicit request
-(`glra-osc lights --apply`, later the app's [Apply to pad]); never from `run` or a profile load.
+(`glra-midi lights --apply`, later the app's [Apply to pad]); never from `run` or a profile load.
 
 Payload, 11 bytes: `[1, 0, mode, brightness, speed, direction, colour flag, byte 7, h, s, v]`.
 `apply` changes only bytes 2, 3, 4, 6 and 8-10 and keeps the rest (direction, byte 7) as read.
@@ -217,7 +217,7 @@ _GATE = threading.Lock()
 def _firmware_103_gate():
     """For one write: glra-studio's checks widened to firmware 103's modes and Bob's pad.
 
-    `glra_osc/device/lighting.py` names only modes 0, 1, 2 and 4, and
+    `glra_midi/device/lighting.py` names only modes 0, 1, 2 and 4, and
     `transactions.validate_status` accepts only firmware 100 / PID 0x246D. The vendored files stay
     as they were; this widens both for the length of the call, as
     `.loom/tied/midi-mvp/unique-assignments.tied/program.py` did for assignment writes.
@@ -369,7 +369,7 @@ def connect(directory=None):
             audit.close()
 
 
-# --- `glra-osc lights` -----------------------------------------------------------------------
+# --- `glra-midi lights` -----------------------------------------------------------------------
 
 
 def lights_command(profile_path=None, apply_changes=False, out=None, err=None, ask=input):
@@ -389,15 +389,15 @@ def lights_command(profile_path=None, apply_changes=False, out=None, err=None, a
         try:
             lighting = load_profile(path).lighting
         except ProfileError as exc:
-            print(f"glra-osc: {exc}", file=err)
+            print(f"glra-midi: {exc}", file=err)
             return 2
         if lighting is None:
-            print(f"glra-osc: {path} has no [lighting] section; nothing to apply", file=err)
+            print(f"glra-midi: {path} has no [lighting] section; nothing to apply", file=err)
             return 2
         try:
             check(lighting)
         except LightingError as exc:
-            print(f"glra-osc: lighting: {exc}", file=err)
+            print(f"glra-midi: lighting: {exc}", file=err)
             return 2
     try:
         with connect() as (reader, identity):
@@ -426,5 +426,5 @@ def lights_command(profile_path=None, apply_changes=False, out=None, err=None, a
                 print(f"written and read back; backup {result['backup']}", file=out)
             return 0
     except (LightingError, ValueError, RuntimeError, OSError, TimeoutError) as exc:
-        print(f"glra-osc: lighting: {exc}", file=err)
+        print(f"glra-midi: lighting: {exc}", file=err)
         return 1

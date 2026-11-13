@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
-"""Lighting modes: payloads, the guarded write and `glra-osc lights`, all on a fake pad."""
+"""Lighting modes: payloads, the guarded write and `glra-midi lights`, all on a fake pad."""
 
 import io
 import tempfile
@@ -9,13 +9,13 @@ from contextlib import contextmanager
 from pathlib import Path
 from unittest import mock
 
-from glra_osc import lighting, profile
-from glra_osc.device import lighting as studio
-from glra_osc.device import transactions
-from glra_osc.device.model import demo_table
-from glra_osc.device.storage import load
-from glra_osc.lighting import LightingError, build, check, describe, parse
-from glra_osc.profile import Lighting
+from glra_midi import lighting, profile
+from glra_midi.device import lighting as studio
+from glra_midi.device import transactions
+from glra_midi.device.model import demo_table
+from glra_midi.device.storage import load
+from glra_midi.lighting import LightingError, build, check, describe, parse
+from glra_midi.profile import Lighting
 
 # What `glean:k16n3-lighting` records on Bob's pad: stock mode 4, direction 3, byte 7 = 8.
 STOCK = bytes.fromhex("0100040403030008ffffff")
@@ -467,10 +467,14 @@ class CommandTests(unittest.TestCase):
         self.assertNotIn("paused", err)
 
     def test_the_cli_routes_lights(self):
-        from glra_osc import cli
+        from glra_midi import cli
 
-        with mock.patch.object(lighting, "lights_command", return_value=0) as command:
+        with (
+            mock.patch.object(lighting, "lights_command", return_value=0) as command,
+            mock.patch.object(cli, "_migrate_app_dir") as migrate,
+        ):
             self.assertEqual(cli.main(["lights", "--apply", "--profile", "x.toml"]), 0)
+        migrate.assert_called_once_with()
         command.assert_called_once_with(profile_path="x.toml", apply_changes=True)
 
 

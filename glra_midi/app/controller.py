@@ -6,7 +6,7 @@ The profile lives here, in Python. QML draws what `ui` properties hold and calls
 below; it keeps no profile logic and no summary text. The controller touches no device.
 
 Files (design 4.8): the profile opens from `profile.current_profile_path()`; Open and Save As
-work inside the profiles folder and call `set_current`, so `glra-osc run` follows. A change
+work inside the profiles folder and call `set_current`, so `glra-midi run` follows. A change
 to the open file, or to `current`, on disk reloads (no unsaved edits) or raises a
 "changed on disk" notice (unsaved edits). `poll()` does that check; `poll_ms` > 0 runs it on a
 timer.
@@ -365,7 +365,7 @@ class Controller(QObject):
             for p in prof.validate(profile)
         ]
         self._ui = {
-            "title": f"glra-osc config — {self.name}" + (" •" if self.is_dirty else ""),
+            "title": f"glra-midi config — {self.name}" + (" •" if self.is_dirty else ""),
             "keys": keys,
             "dials": dials,
             "tabs": tabs,

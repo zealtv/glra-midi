@@ -8,6 +8,15 @@ import sys
 from . import __version__
 
 
+def _migrate_app_dir():
+    """Carry a pre-rename profile folder across before a command reads it (once, ever)."""
+    from .profile import migrate_app_dir
+
+    message = migrate_app_dir()
+    if message:
+        print(message, file=sys.stderr)
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv[:1] == ["config"]:
@@ -15,8 +24,8 @@ def main(argv=None):
         from .app import main as config_main
 
         return config_main(argv[1:])
-    parser = argparse.ArgumentParser(prog="glra-osc", description=__doc__)
-    parser.add_argument("--version", action="version", version=f"glra-osc {__version__}")
+    parser = argparse.ArgumentParser(prog="glra-midi", description=__doc__)
+    parser.add_argument("--version", action="version", version=f"glra-midi {__version__}")
     sub = parser.add_subparsers(dest="command")
     mon = sub.add_parser("monitor", help="print the pad's decoded control events (read-only)")
     mon.add_argument("--raw", action="store_true", help="also print each raw report as hex")
@@ -52,14 +61,16 @@ def main(argv=None):
     )
     sub.add_parser(
         "config",
-        help="open the configuration app (needs the `gui` extra); see `glra-osc config --help`",
+        help="open the configuration app (needs the `gui` extra); see `glra-midi config --help`",
         add_help=False,
     )
     sub.add_parser(
         "unsilence",
-        help="remove glra-osc's key-mapping entries from the pad (after a crash or kill -9)",
+        help="remove glra-midi's key-mapping entries from the pad (after a crash or kill -9)",
     )
     args = parser.parse_args(argv)
+    if args.command is not None:
+        _migrate_app_dir()
     if args.command == "monitor":
         from .monitor import run
 
@@ -68,7 +79,7 @@ def main(argv=None):
         try:
             return run(raw=args.raw, allow_typing=args.allow_typing, profile=args.profile)
         except ProfileError as err:
-            print(f"glra-osc: {err}", file=sys.stderr)
+            print(f"glra-midi: {err}", file=sys.stderr)
             return 2
     if args.command == "run":
         from .profile import ProfileError
@@ -77,7 +88,7 @@ def main(argv=None):
         try:
             return run(config=args.config, dry_run=args.dry_run, allow_typing=args.allow_typing)
         except ProfileError as err:
-            print(f"glra-osc: {err}", file=sys.stderr)
+            print(f"glra-midi: {err}", file=sys.stderr)
             return 2
     if args.command == "lights":
         from .lighting import lights_command
@@ -90,7 +101,7 @@ def main(argv=None):
         try:
             removed = Silencer(load_layout()).unsilence()
         except SilenceError as err:
-            print(f"glra-osc: {err}", file=sys.stderr)
+            print(f"glra-midi: {err}", file=sys.stderr)
             return 1
         print(f"removed {removed} entries" if removed else "nothing to remove")
         return 0

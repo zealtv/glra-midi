@@ -5,9 +5,9 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from glra_osc.device.model import demo_table
-from glra_osc.device.transactions import write_one, TransactionError, packet
-from glra_osc.device.storage import load
+from glra_midi.device.model import demo_table
+from glra_midi.device.transactions import write_one, TransactionError, packet
+from glra_midi.device.storage import load
 
 
 class Audit:
@@ -70,7 +70,7 @@ class TransactionTests(unittest.TestCase):
     def test_backup_failure_prevents_write(self):
         with tempfile.TemporaryDirectory() as folder:
             r = FakeReader(folder)
-            with patch("glra_osc.device.transactions.save", side_effect=OSError("disk full")):
+            with patch("glra_midi.device.transactions.save", side_effect=OSError("disk full")):
                 with self.assertRaises(OSError):
                     write_one(r, {}, 0, "20021300", "20005f00", folder)
             self.assertEqual(r.writes, [])

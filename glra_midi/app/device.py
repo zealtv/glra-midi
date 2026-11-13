@@ -7,7 +7,7 @@ itself, so tests, `--demo` and every capture pass a `FakePad` and no real HID ca
 Only `RealPad` (made by `gui.main` when it is not in `--demo`) reaches the device:
 
 - `read()` is read-only: the pad's status (firmware) and its 11 lighting bytes (`06 0a`).
-- `apply(lighting, directory)` is the one guarded write (`glra_osc.lighting.apply`: read,
+- `apply(lighting, directory)` is the one guarded write (`glra_midi.lighting.apply`: read,
   backup, `06 0b`, exact readback). It runs only when the controller is told to by an explicit
   [Apply to pad] click; nothing here calls it on its own.
 
@@ -101,10 +101,10 @@ class FakePad:
 
 
 class RealPad:
-    """The real pad, through `glra_osc.lighting`. Built only by `gui.main` outside `--demo`.
+    """The real pad, through `glra_midi.lighting`. Built only by `gui.main` outside `--demo`.
 
     Each call opens the vendor interface non-exclusively, does its work and closes it, so it
-    does not hold the pad while `glra-osc run` plays (whether a read still answers then needs
+    does not hold the pad while `glra-midi run` plays (whether a read still answers then needs
     the real pad to find out; the stitch's report says so).
     """
 

@@ -5,9 +5,9 @@ import json
 import unittest
 from pathlib import Path
 
-from glra_osc.decode import Decoder, load_layout
-from glra_osc.events import ControlEvent, format_event
-from glra_osc.monitor import render
+from glra_midi.decode import Decoder, load_layout
+from glra_midi.events import ControlEvent, format_event
+from glra_midi.monitor import render
 
 FIXTURES = Path(__file__).parent / "fixtures"
 FIXTURE = FIXTURES / "captured_reports.jsonl"  # 2026-11-12, stock assignments

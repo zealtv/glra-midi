@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
-"""The inspector's pure model (`glra_osc/app/inspector.py`): no Qt needed."""
+"""The inspector's pure model (`glra_midi/app/inspector.py`): no Qt needed."""
 
 import unittest
 
-from glra_osc import profile as prof
-from glra_osc.app import inspector as insp
+from glra_midi import profile as prof
+from glra_midi.app import inspector as insp
 
 
 def profile_with(**controls):

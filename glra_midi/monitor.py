@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
-"""`glra-osc monitor`: read-only, non-exclusive live view of the pad's controls.
+"""`glra-midi monitor`: read-only, non-exclusive live view of the pad's controls.
 
 One reader thread per input interface feeds a queue; the main thread decodes
 and prints. An unplugged interface ends its thread; the main loop rescans once

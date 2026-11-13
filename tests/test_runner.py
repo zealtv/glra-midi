@@ -9,8 +9,8 @@ from unittest import mock
 
 import time
 
-from glra_osc import monitor, runner
-from glra_osc.profile import ProfileError, profile_path, set_current
+from glra_midi import monitor, runner
+from glra_midi.profile import ProfileError, profile_path, set_current
 
 from .test_silence import FakeHidutil, make_silencer
 

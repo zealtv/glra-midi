@@ -7,8 +7,8 @@ from dataclasses import replace
 from . import qt_support  # noqa: F401 - skips this module without PySide6, sets up Qt
 from .qt_support import make_home, write_profile
 
-from glra_osc import profile as prof
-from glra_osc.app.controller import Controller, has_comments
+from glra_midi import profile as prof
+from glra_midi.app.controller import Controller, has_comments
 
 NOTHING = "version = 1\n"
 
@@ -48,7 +48,7 @@ class StartTests(ControllerCase):
     def test_opens_the_current_profile_clean(self):
         self.assertEqual(self.c.profileName, "default")
         self.assertFalse(self.c.dirty)
-        self.assertEqual(self.c.title, "glra-osc config — default")
+        self.assertEqual(self.c.title, "glra-midi config — default")
         self.assertEqual(self.c.profile.layer_count, 4)
 
     def test_starts_on_the_shipped_default_when_there_is_no_profile(self):

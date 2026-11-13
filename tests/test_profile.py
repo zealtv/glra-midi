@@ -3,10 +3,11 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
-from glra_osc import profile
-from glra_osc.profile import (
+from glra_midi import profile
+from glra_midi.profile import (
     CONTROL_NAMES,
     CcAbsolute,
     CcMomentary,
@@ -35,6 +36,7 @@ from glra_osc.profile import (
     make_per_layer,
     parse_profile,
     profile_path,
+    migrate_app_dir,
     profiles_dir,
     remove_layer,
     rename_layer,
@@ -531,7 +533,7 @@ class RoundTripTests(unittest.TestCase):
         self.assertEqual(positions, sorted(positions))
         self.assertIn('names = ["Drums", "", "Mixer"]', text)
         self.assertIn("color = [10, 200, 255]", text)
-        self.assertTrue(text.startswith("# glra-osc profile"))
+        self.assertTrue(text.startswith("# glra-midi profile"))
 
     def test_trailing_empty_names_are_not_written(self):
         p = Profile(layer_names=("A", "", "", ""))
@@ -593,11 +595,102 @@ class FileTests(unittest.TestCase):
 
     def test_paths(self):
         self.assertTrue(default_profile_path().is_file())
-        base = Path("/Users/someone/Library/Application Support/glra-osc")
+        base = Path("/Users/someone/Library/Application Support/glra-midi")
         self.assertEqual(app_dir("/Users/someone"), base)
         self.assertEqual(profiles_dir("/Users/someone"), base / "profiles")
         self.assertEqual(profile_path("drums", "/Users/someone"), base / "profiles" / "drums.toml")
-        self.assertEqual(app_dir().name, "glra-osc")
+        self.assertEqual(app_dir().name, "glra-midi")
+
+
+class AppDirMigrationTests(unittest.TestCase):
+    """The pre-rename `glra-osc` folder moves to `glra-midi` once (Bob, 2026-11-13, Q9)."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.home = Path(tmp.name)
+        self.support = self.home / "Library" / "Application Support"
+        self.old = self.support / "glra-osc"
+        self.new = self.support / "glra-midi"
+
+    def fill_old(self):
+        (self.old / "profiles").mkdir(parents=True)
+        (self.old / "profiles" / "drums.toml").write_text("version = 1\n")
+        (self.old / "current").write_text("drums\n")
+        (self.old / "backups").mkdir()
+        (self.old / "backups" / "b.json").write_text("{}")
+        (self.old / "logs").mkdir()
+        (self.old / "logs" / "audit.log").write_text("x\n")
+
+    def test_the_new_folder_is_named_glra_midi(self):
+        self.assertEqual(app_dir(self.home), self.new)
+
+    def test_moves_everything_and_says_so_once(self):
+        self.fill_old()
+        message = migrate_app_dir(self.home)
+        self.assertIn(str(self.old), message)
+        self.assertIn(str(self.new), message)
+        self.assertFalse(self.old.exists())
+        self.assertEqual((self.new / "current").read_text(), "drums\n")
+        for rel in ("profiles/drums.toml", "backups/b.json", "logs/audit.log"):
+            self.assertTrue((self.new / rel).is_file(), rel)
+        self.assertIsNone(migrate_app_dir(self.home))  # second start: nothing to say
+        self.assertEqual(current_profile_path(self.home), self.new / "profiles" / "drums.toml")
+
+    def test_no_old_folder_does_nothing(self):
+        self.assertIsNone(migrate_app_dir(self.home))
+        self.assertFalse(self.new.exists())
+
+    def test_an_existing_new_folder_is_left_alone_and_the_old_one_kept(self):
+        self.fill_old()
+        self.new.mkdir(parents=True)
+        (self.new / "current").write_text("default\n")
+        self.assertIsNone(migrate_app_dir(self.home))
+        self.assertEqual((self.new / "current").read_text(), "default\n")
+        self.assertTrue((self.old / "current").is_file())
+
+    def test_an_old_file_not_folder_is_ignored(self):
+        self.support.mkdir(parents=True)
+        self.old.write_text("not a folder")
+        self.assertIsNone(migrate_app_dir(self.home))
+        self.assertFalse(self.new.exists())
+
+    def test_a_failed_move_is_reported_and_changes_nothing(self):
+        self.fill_old()
+        with mock.patch.object(Path, "rename", side_effect=OSError("busy")):
+            message = migrate_app_dir(self.home)
+        self.assertIn("could not move", message)
+        self.assertTrue((self.old / "current").is_file())
+        self.assertFalse(self.new.exists())
+
+    def test_the_cli_moves_the_folder_on_a_command_but_not_on_version(self):
+        import contextlib
+        import io
+
+        from glra_midi import cli, lighting
+
+        old = Path.home() / "Library" / "Application Support" / "glra-osc"
+        new = app_dir()
+        self.assertTrue(str(old).startswith(tempfile.gettempdir().rstrip("/")))
+        (old / "profiles").mkdir(parents=True)
+        self.addCleanup(lambda: [__import__("shutil").rmtree(p, True) for p in (old, new)])
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit):
+            cli.main(["--version"])
+        self.assertTrue(old.is_dir())
+        with (
+            mock.patch.object(lighting, "lights_command", return_value=0),
+            contextlib.redirect_stderr(err),
+        ):
+            self.assertEqual(cli.main(["lights"]), 0)
+            self.assertEqual(cli.main(["lights"]), 0)
+        self.assertFalse(old.exists())
+        self.assertTrue((new / "profiles").is_dir())
+        self.assertEqual(err.getvalue().count("moved"), 1)
+
+    def test_the_default_home_is_the_test_home(self):
+        # tests/__init__.py points HOME at a throwaway folder; this guards Bob's real one.
+        self.assertTrue(str(Path.home()).startswith(tempfile.gettempdir().rstrip("/")))
 
 
 class ProfileFolderTests(unittest.TestCase):

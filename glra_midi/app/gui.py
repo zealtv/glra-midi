@@ -3,7 +3,7 @@
 # The start-up shape (Basic style, QQmlApplicationEngine with a context property, grabWindow
 # for captures) follows glra-studio's macropad/gui.py, taken at commit 33aa281.
 
-"""Qt Quick start-up: `glra-osc-config`, `--demo` and `--capture` (docs/config-app.md 4.12)."""
+"""Qt Quick start-up: `glra-midi-config`, `--demo` and `--capture` (docs/config-app.md 4.12)."""
 
 import argparse
 import os
@@ -25,7 +25,7 @@ CAPTURE_DELAY_MS = 700
 
 def demo_home():
     """A throwaway home holding the fixture profiles, so `--demo` never touches the user's own."""
-    home = Path(tempfile.mkdtemp(prefix="glra-osc-demo-"))
+    home = Path(tempfile.mkdtemp(prefix="glra-midi-demo-"))
     folder = prof.profiles_dir(home)
     folder.mkdir(parents=True)
     shutil.copy(DEMO_PROFILE, folder / "default.toml")
@@ -146,7 +146,7 @@ def _apply_mismatch(window, controller):
         before.hex(),
         expected.hex(),
         bytes(other).hex(),
-        "~/Library/Application Support/glra-osc/backups/20261113T120000.000000Z-lighting-before.json",
+        "~/Library/Application Support/glra-midi/backups/20261113T120000.000000Z-lighting-before.json",
         "Lighting readback did not match.",
     )
     controller.applyLighting()
@@ -223,7 +223,7 @@ def make_pad(demo):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        prog="glra-osc config", description="Edit a glra-osc profile: layers, events, orientation"
+        prog="glra-midi config", description="Edit a glra-midi profile: layers, events, orientation"
     )
     parser.add_argument(
         "--demo",
@@ -252,13 +252,17 @@ def main(argv=None):
     from .controller import Controller
 
     app = QGuiApplication(sys.argv[:1])
-    app.setApplicationName("glra-osc config")
-    app.setApplicationDisplayName("glra-osc config")
+    app.setApplicationName("glra-midi config")
+    app.setApplicationDisplayName("glra-midi config")
+    if not args.demo:
+        message = prof.migrate_app_dir()  # the pre-rename folder, before the controller reads it
+        if message:
+            print(message, file=sys.stderr)
     home = demo_home() if args.demo else None
     try:
         scheme = "dark" if args.dark else "light" if args.light else "system"
         # `--demo` and every capture run on the in-memory FakePad: no HID call can happen. Only a
-        # plain `glra-osc config` (no --demo) gets the RealPad, which reads the pad's state and
+        # plain `glra-midi config` (no --demo) gets the RealPad, which reads the pad's state and
         # writes lighting only on an explicit [Apply to pad] click.
         pad = make_pad(args.demo)
         controller = Controller(

@@ -10,10 +10,10 @@ from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickWindow
 from PySide6.QtTest import QTest
 
-from glra_osc import profile as prof
-from glra_osc.app import device as pads
-from glra_osc.app import gui
-from glra_osc.app.controller import Controller
+from glra_midi import profile as prof
+from glra_midi.app import device as pads
+from glra_midi.app import gui
+from glra_midi.app.controller import Controller
 
 
 class QmlCase(unittest.TestCase):
@@ -77,7 +77,7 @@ class LoadTests(QmlCase):
             with self.subTest(scheme=scheme):
                 window = self.load(scheme)
                 self.assertIsInstance(window, QQuickWindow)
-                self.assertEqual(window.title(), "glra-osc config — default")
+                self.assertEqual(window.title(), "glra-midi config — default")
                 self.assertEqual(self.warnings, [])
                 self.assertEqual(window.property("dark"), scheme == "dark")
 

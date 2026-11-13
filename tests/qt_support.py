@@ -16,8 +16,8 @@ try:
 except ImportError:
     raise unittest.SkipTest("PySide6 not installed (pip install '.[gui]')") from None
 
-from glra_osc import profile as prof
-from glra_osc.app import gui
+from glra_midi import profile as prof
+from glra_midi.app import gui
 
 app = QGuiApplication.instance() or QGuiApplication([])
 
@@ -50,10 +50,10 @@ def forbid_real_device(testcase):
         raise AssertionError("a test tried to reach the real pad; use a FakePad")
 
     for target in (
-        "glra_osc.device.backend.enumerate_devices",
-        "glra_osc.device.backend.select",
-        "glra_osc.device.backend.open_device",
-        "glra_osc.lighting.connect",
+        "glra_midi.device.backend.enumerate_devices",
+        "glra_midi.device.backend.select",
+        "glra_midi.device.backend.open_device",
+        "glra_midi.lighting.connect",
     ):
         patcher = mock.patch(target, refuse)
         patcher.start()

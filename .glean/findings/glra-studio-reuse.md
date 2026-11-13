@@ -24,7 +24,7 @@ vendor reads; refuses to proceed if the vendor descriptor changes),
 Its `docs/protocol.md` holds the opcode table and slot layout.
 
 Plan as of 2026-11-12 (`loom:project-skeleton`): vendor the needed modules
-under `glra_osc/device/` with SPDX headers kept, and license this repo
+under `glra_midi/device/` with SPDX headers kept, and license this repo
 GPL-3.0-only. That matters for Bob's later public release.
 
 ## Associations

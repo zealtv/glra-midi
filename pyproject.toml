@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "glra-osc"
+name = "glra-midi"
 version = "0.0.1"
 description = "Host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI controller"
 readme = "README.md"
@@ -22,11 +22,11 @@ dev = ["ruff==0.12.12"]
 gui = ["PySide6==6.10.2"]
 
 [project.scripts]
-glra-osc = "glra_osc.cli:main"
-glra-osc-config = "glra_osc.app:main"
+glra-midi = "glra_midi.cli:main"
+glra-midi-config = "glra_midi.app:main"
 
 [tool.setuptools.packages.find]
-include = ["glra_osc*"]
+include = ["glra_midi*"]
 
 [tool.ruff]
 line-length = 100
@@ -36,6 +36,6 @@ target-version = "py313"
 select = ["E4", "E7", "E9", "F"]
 
 [tool.setuptools.package-data]
-glra_osc = ["*.toml"]
-"glra_osc.device" = ["layout.json"]
-"glra_osc.app" = ["qml/*.qml", "*.toml"]
+glra_midi = ["*.toml"]
+"glra_midi.device" = ["layout.json"]
+"glra_midi.app" = ["qml/*.qml", "*.toml"]

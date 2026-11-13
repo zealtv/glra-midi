@@ -1,4 +1,4 @@
-# glra-osc default profile: the file to copy and edit (the app writes the same format).
+# glra-midi default profile: the file to copy and edit (the app writes the same format).
 # Design: docs/config-app.md section 2.
 #
 # Control names are PHYSICAL and never change with the pad's orientation:

@@ -2,11 +2,11 @@
 
 import unittest
 
-from glra_osc import orientation as o
-from glra_osc.decode import load_layout
-from glra_osc.events import ControlEvent, format_event
-from glra_osc.monitor import render
-from glra_osc.decode import Decoder
+from glra_midi import orientation as o
+from glra_midi.decode import load_layout
+from glra_midi.events import ControlEvent, format_event
+from glra_midi.monitor import render
+from glra_midi.decode import Decoder
 
 ALL = o.ORIENTATIONS
 
