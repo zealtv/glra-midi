@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "glra-midi"
-version = "0.0.1"
+dynamic = ["version"]
 description = "Host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI controller"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -24,6 +24,9 @@ gui = ["PySide6==6.10.2"]
 [project.scripts]
 glra-midi = "glra_midi.cli:main"
 glra-midi-config = "glra_midi.app:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "glra_midi.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["glra_midi*"]
