@@ -12,6 +12,14 @@ release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Applying a lighting mode no longer reports "Written to the pad, but it did not
+  read back as expected" when the pad only normalised bytes it ignores (firmware
+  103 resets the colour to `ff ff ff` with One colour off, and rewrites an unused
+  byte with it on). Any other difference still shows. The app's "Pad now" line
+  shows what the pad holds.
+
 ## [0.1.0] - 2026-11-13
 
 First public release. The project began as `glra-osc` and was renamed

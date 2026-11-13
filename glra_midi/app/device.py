@@ -8,7 +8,7 @@ Only `RealPad` (made by `gui.main` when it is not in `--demo`) reaches the devic
 
 - `read()` is read-only: the pad's status (firmware) and its 11 lighting bytes (`06 0a`).
 - `apply(lighting, directory)` is the one guarded write (`glra_midi.lighting.apply`: read,
-  backup, `06 0b`, exact readback). It runs only when the controller is told to by an explicit
+  backup, `06 0b`, readback that ignores what firmware 103 normalises). It runs only when the controller is told to by an explicit
   [Apply to pad] click; nothing here calls it on its own.
 
 Both calls block, so the controller runs them on `padworker.PadWorker`'s thread, as
