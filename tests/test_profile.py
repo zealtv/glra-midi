@@ -21,8 +21,11 @@ from glra_osc.profile import (
     Profile,
     ProfileError,
     add_layer,
+    app_dir,
+    check_profile_name,
     clear_event,
     control_shape,
+    current_profile_path,
     default_profile_path,
     dump_profile,
     dumps_profile,
@@ -30,11 +33,13 @@ from glra_osc.profile import (
     make_global,
     make_per_layer,
     parse_profile,
+    profile_path,
+    profiles_dir,
     remove_layer,
     rename_layer,
+    set_current,
     set_event,
     set_layer_key,
-    user_profile_path,
     validate,
 )
 
@@ -74,7 +79,8 @@ kind = "cc-momentary"
 cc = 20
 low = 10
 high = 120
-ease-ms = 250
+rise-ms = 250
+fall-ms = 600
 curve = "ease-out"
 channel = 2
 
@@ -135,7 +141,7 @@ EVERY_KIND = Profile(
         "key.1": Note(note=36, velocity=100, mode="latch", channel=10),
         "key.2": PerLayer.of(
             {
-                1: CcMomentary(cc=20, low=5, high=100, ease_ms=250, curve="ease-in", mode="latch"),
+                1: CcMomentary(cc=20, low=5, high=100, rise_ms=250, fall_ms=600, curve="ease-in", mode="latch"),
                 3: CcSet(cc=21, value=64, channel=2),
             }
         ),
@@ -216,7 +222,7 @@ cc = 7
         self.assertEqual(
             p.controls["key.1"],
             CcMomentary(
-                cc=9, low=0, high=127, ease_ms=0, curve="linear", mode="momentary", channel=None
+                cc=9, low=0, high=127, rise_ms=0, fall_ms=0, curve="linear", mode="momentary", channel=None
             ),
         )
 
@@ -228,7 +234,7 @@ cc = 7
         self.assertEqual(p.action("key.2", 1), Note(note=37, mode="latch"))
         self.assertEqual(
             p.action("key.2", 2),
-            CcMomentary(cc=20, low=10, high=120, ease_ms=250, curve="ease-out", channel=2),
+            CcMomentary(cc=20, low=10, high=120, rise_ms=250, fall_ms=600, curve="ease-out", channel=2),
         )
         self.assertIsNone(p.action("key.2", 3))
         self.assertEqual(p.action("key.8", 1), CcStep(cc=21, step=-8, ease_ms=120, curve="ease-in-out"))
@@ -272,6 +278,14 @@ class ErrorTests(unittest.TestCase):
 
     def key(self, body, name="key.1"):
         return f"version = 1\n[{name}]\n{body}"
+
+    def test_cc_momentary_has_no_ease_ms(self):
+        self.assertError(
+            self.key("kind = 'cc-momentary'\ncc = 1\nease-ms = 5\n"), start="key.1.ease-ms"
+        )
+        self.assertError(
+            self.key("kind = 'cc-momentary'\ncc = 1\nfall-ms = 10001\n"), start="key.1.fall-ms"
+        )
 
     def test_bad_toml(self):
         self.assertError("version = 1\n[key.1\n", "not valid TOML")
@@ -484,6 +498,16 @@ class RoundTripTests(unittest.TestCase):
         self.assertIn('[key.2]\nkind = "cc-step"\ncc = 1\nstep = -1\n', text)
         self.assertNotIn("ease-ms", text)
 
+    def test_cc_momentary_rise_and_fall_are_separate(self):
+        p = parse_profile(
+            'version = 1\n[key.1]\nkind = "cc-momentary"\ncc = 1\nrise-ms = 50\n'
+        )
+        self.assertEqual(p.controls["key.1"], CcMomentary(cc=1, rise_ms=50, fall_ms=0))
+        text = dumps_profile(p)
+        self.assertIn("rise-ms = 50", text)
+        self.assertNotIn("fall-ms", text)
+        self.assertEqual(parse_profile(text), p)
+
     def test_fixed_order_and_one_line_arrays(self):
         text = dumps_profile(EVERY_KIND)
         order = [
@@ -568,37 +592,129 @@ class FileTests(unittest.TestCase):
 
     def test_paths(self):
         self.assertTrue(default_profile_path().is_file())
-        self.assertEqual(
-            user_profile_path("/Users/someone"),
-            Path("/Users/someone/Library/Application Support/glra-osc/profile.toml"),
-        )
-        self.assertEqual(user_profile_path().name, "profile.toml")
+        base = Path("/Users/someone/Library/Application Support/glra-osc")
+        self.assertEqual(app_dir("/Users/someone"), base)
+        self.assertEqual(profiles_dir("/Users/someone"), base / "profiles")
+        self.assertEqual(profile_path("drums", "/Users/someone"), base / "profiles" / "drums.toml")
+        self.assertEqual(app_dir().name, "glra-osc")
+
+
+class ProfileFolderTests(unittest.TestCase):
+    """The profiles folder and the `current` pointer (design 2; Bob, 2026-11-13, Q7)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name)
+        self.current = app_dir(self.home) / "current"
+
+    def add(self, name, text="version = 1\n"):
+        path = profile_path(name, self.home)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        return path
+
+    def point(self, text):
+        self.current.parent.mkdir(parents=True, exist_ok=True)
+        self.current.write_text(text)
+
+    def test_a_fresh_home_gets_default_from_the_shipped_profile(self):
+        path = current_profile_path(self.home)
+        self.assertEqual(path, profiles_dir(self.home) / "default.toml")
+        self.assertEqual(path.read_text(), default_profile_path().read_text())
+        self.assertEqual(self.current.read_text().strip(), "default")
+        self.assertEqual(load_profile(path), load_profile())
+
+    def test_follows_the_pointer(self):
+        self.add("default")
+        drums = self.add("drums")
+        self.point("drums\n")
+        self.assertEqual(current_profile_path(self.home), drums)
+
+    def test_every_fallback_lands_on_default_and_keeps_the_pointer(self):
+        for pointer in ("", "  \n", "nope\n", "../x\n", ".hidden\n", "a/b\n"):
+            with self.subTest(pointer=pointer):
+                self.point(pointer)
+                path = current_profile_path(self.home)
+                self.assertEqual(path, profiles_dir(self.home) / "default.toml")
+                self.assertTrue(path.is_file())
+                self.assertEqual(self.current.read_text(), pointer)  # never rewritten
+
+    def test_an_existing_default_is_never_overwritten(self):
+        default = self.add("default", "version = 1\n# mine\n")
+        self.assertEqual(current_profile_path(self.home), default)
+        self.assertEqual(default.read_text(), "version = 1\n# mine\n")
+        self.assertEqual(self.current.read_text().strip(), "default")  # missing pointer written
+
+    def test_a_pointer_that_exists_is_never_rewritten(self):
+        self.add("default")
+        self.point("gone\n")
+        current_profile_path(self.home)
+        self.assertEqual(self.current.read_text(), "gone\n")
+
+    def test_set_current(self):
+        self.add("drums")
+        set_current("drums", self.home)
+        self.assertEqual(self.current.read_text(), "drums\n")
+        self.assertEqual(current_profile_path(self.home), profile_path("drums", self.home))
+
+    def test_set_current_needs_an_existing_profile(self):
+        self.add("default")
+        with self.assertRaises(ProfileError):
+            set_current("missing", self.home)
+        self.assertFalse(self.current.exists())
+
+    def test_set_current_leaves_no_temp_file(self):
+        self.add("drums")
+        set_current("drums", self.home)
+        self.assertEqual(sorted(os.listdir(app_dir(self.home))), ["current", "profiles"])
+
+    def test_names(self):
+        for name in ("drums", "my drums 2", "Über", "a.b", "x" * 100):
+            self.assertEqual(check_profile_name(name), name)
+        for name in ("", ".x", "a/b", "a\\b", "a\0b", "x" * 101, None, 5):
+            with self.subTest(name=name):
+                with self.assertRaises(ProfileError):
+                    check_profile_name(name)
+        with self.assertRaises(ProfileError):
+            set_current("../escape", self.home)
 
 
 class DefaultProfileTests(unittest.TestCase):
+    """Bob, 2026-11-13, Q3 (design 2.7)."""
+
     def setUp(self):
         self.p = load_profile()
 
     def test_shape(self):
         p = self.p
-        self.assertEqual((p.port, p.channel, p.layer_count, p.lighting), ("GLRA K16", 1, 4, None))
-        self.assertEqual(p.layer_names, ("",) * 4)
+        self.assertEqual((p.port, p.channel, p.layer_count, p.lighting), ("GLRA K16", 1, 3, None))
+        self.assertEqual(p.layer_names, ("",) * 3)
         self.assertEqual(validate(p), [])
 
-    def test_keys_are_per_layer_notes(self):
-        for layer in range(1, 5):
+    def test_keys_are_momentary_notes_on_the_layers_channel(self):
+        for layer in range(1, 4):
             for key in range(1, 17):
                 self.assertEqual(
                     self.p.action(f"key.{key}", layer),
-                    Note(note=36 + 16 * (layer - 1) + (key - 1)),
+                    Note(note=35 + key, channel=layer),
                 )
 
-    def test_pushes_and_turns(self):
-        self.assertEqual(self.p.controls["enc.1.push"], LayerDec())
-        self.assertEqual(self.p.controls["enc.2.push"], LayerSet(layer=1))
-        self.assertEqual(self.p.controls["enc.3.push"], LayerInc())
+    def test_dial_pushes_select_layers(self):
         for n in (1, 2, 3):
-            self.assertEqual(self.p.controls[f"enc.{n}.turn"], CcRelative(cc=15 + n))
+            self.assertEqual(self.p.controls[f"enc.{n}.push"], LayerSet(layer=n))
+
+    def test_left_and_middle_dials_are_per_layer_relative(self):
+        for n in (1, 2):
+            for layer in range(1, 4):
+                self.assertEqual(
+                    self.p.action(f"enc.{n}.turn", layer), CcRelative(cc=15 + n, channel=layer)
+                )
+
+    def test_right_dial_is_one_global_absolute_cc(self):
+        self.assertEqual(
+            self.p.controls["enc.3.turn"], CcAbsolute(cc=18, channel=1, initial=64)
+        )
         self.assertEqual(len(self.p.controls), 16 + 6)
 
 

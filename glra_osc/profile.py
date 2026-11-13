@@ -46,7 +46,10 @@ PROFILE_VERSION = 1
 # Application Support directory name. One constant, so the glra-midi rename touches one
 # line (docs/config-app.md section 2, Q9).
 APP_DIR_NAME = "glra-osc"
-PROFILE_FILE_NAME = "profile.toml"
+PROFILES_DIR_NAME = "profiles"
+CURRENT_FILE_NAME = "current"
+DEFAULT_PROFILE_NAME = "default"
+MAX_NAME_LENGTH = 100
 
 KEY_COUNT = 16
 ENCODER_COUNT = 3
@@ -91,7 +94,8 @@ class CcMomentary:
     cc: int
     low: int = 0
     high: int = 127
-    ease_ms: int = 0
+    rise_ms: int = 0  # glide up to `high` on press
+    fall_ms: int = 0  # glide back down to `low` on release
     curve: str = "linear"
     mode: str = "momentary"
     channel: int | None = None
@@ -283,7 +287,8 @@ _SPECS = {
         _CC,
         _Int("low", 0, 127, default=0),
         _Int("high", 0, 127, default=127),
-        _EASE,
+        _Int("rise-ms", 0, 10000, default=0),
+        _Int("fall-ms", 0, 10000, default=0),
         _CURVE,
         _MODE,
         _CHANNEL,
@@ -314,10 +319,70 @@ def default_profile_path():
     return Path(str(resources.files("glra_osc").joinpath("default_profile.toml")))
 
 
-def user_profile_path(home=None):
-    """Where the app and `glra-osc run` keep the user's profile."""
+def app_dir(home=None):
+    """The application folder: `~/Library/Application Support/<APP_DIR_NAME>/` (design 2)."""
     home = Path.home() if home is None else Path(home)
-    return home / "Library" / "Application Support" / APP_DIR_NAME / PROFILE_FILE_NAME
+    return home / "Library" / "Application Support" / APP_DIR_NAME
+
+
+def profiles_dir(home=None):
+    """The folder holding one `<name>.toml` per profile."""
+    return app_dir(home) / PROFILES_DIR_NAME
+
+
+def check_profile_name(name):
+    """Return `name` if it can name a profile, else raise `ProfileError` (design 2)."""
+    if not isinstance(name, str) or not name:
+        raise ProfileError(f"profile name: expected a non-empty string, got {name!r}")
+    if len(name) > MAX_NAME_LENGTH:
+        raise ProfileError(f"profile name: at most {MAX_NAME_LENGTH} characters, got {len(name)}")
+    if any(ch in name for ch in "/\\\0") or name.startswith("."):
+        raise ProfileError(f"profile name: no '/', '\\' or NUL and no leading '.', got {name!r}")
+    return name
+
+
+def profile_path(name, home=None):
+    """`profiles/<name>.toml` for a valid `name` (the file may not exist)."""
+    return profiles_dir(home) / f"{check_profile_name(name)}.toml"
+
+
+def _read_current(home):
+    """The name in `current` if it is a valid name, else None; None for a missing file too."""
+    try:
+        text = (app_dir(home) / CURRENT_FILE_NAME).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    name = text.strip()
+    try:
+        return check_profile_name(name)
+    except ProfileError:
+        return None
+
+
+def current_profile_path(home=None):
+    """The file the app and `glra-osc run` play: `profiles/<name>.toml` for the name in
+    `current`. When `current` is missing, empty, invalid or names a file that doesn't exist,
+    fall back to `profiles/default.toml`, creating it from the shipped default if it is
+    missing (an existing file is never overwritten). `current` is written (as `default`) only
+    when it was missing; an existing pointer is never rewritten."""
+    name = _read_current(home)
+    if name is not None and profile_path(name, home).is_file():
+        return profile_path(name, home)
+    fallback = profile_path(DEFAULT_PROFILE_NAME, home)
+    if not fallback.exists():
+        _write_atomic(fallback, default_profile_path().read_text(encoding="utf-8"))
+    if not (app_dir(home) / CURRENT_FILE_NAME).exists():
+        _write_atomic(app_dir(home) / CURRENT_FILE_NAME, DEFAULT_PROFILE_NAME + "\n")
+    return fallback
+
+
+def set_current(name, home=None):
+    """Point `current` at profile `name`. Raises `ProfileError` for an invalid name or when
+    `profiles/<name>.toml` doesn't exist. The write is atomic."""
+    path = profile_path(name, home)
+    if not path.is_file():
+        raise ProfileError(f"profile name: no profile {name!r} in {path.parent}")
+    _write_atomic(app_dir(home) / CURRENT_FILE_NAME, name + "\n")
 
 
 # --- parsing; every message starts with the key path --------------------------------------
@@ -708,11 +773,10 @@ def dumps_profile(profile):
     return HEADER + "\n" + text
 
 
-def dump_profile(profile, path):
-    """Write the profile to `path` atomically (temp file in the same directory, then rename),
-    creating the directory if needed, so a reader never sees half a file."""
+def _write_atomic(path, text):
+    """Write `text` to `path` atomically (temp file in the same directory, then rename),
+    creating the directory if needed and keeping an existing file's permissions."""
     path = Path(path)
-    text = dumps_profile(profile)
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         mode = stat.S_IMODE(path.stat().st_mode)
@@ -734,6 +798,12 @@ def dump_profile(profile, path):
         except OSError:
             pass
         raise
+
+
+def dump_profile(profile, path):
+    """Write the profile to `path` atomically, so a reader never sees half a file. Raises
+    `ProfileError` for a profile with problems, leaving any existing file as it was."""
+    _write_atomic(path, dumps_profile(profile))
 
 
 # --- edit helpers (design 4.6, 4.7) -------------------------------------------------------

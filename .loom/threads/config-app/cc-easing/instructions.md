@@ -11,9 +11,11 @@ Engine only, clock injected (`handle(event)` uses the event's `t`;
   event's time along its curve (linear, ease-in, ease-out, ease-in-out; the
   quadratic formulas in `docs/config-app.md` §3.6), sending only when the
   7-bit value changes, and ending exactly on the target. Each new target takes
-  the full `ease-ms`; tick every 10 ms (100 Hz) while a glide runs.
-- CC momentary: press glides to high, release glides to low, each from wherever
-  the value is at that moment.
+  the event's full time; tick every 10 ms (100 Hz) while a glide runs.
+- CC momentary: press glides to high over `rise-ms`, release glides to low over
+  `fall-ms` (Bob, 2026-11-13, Q2: "sepearate rise and fall please"; one `curve`
+  serves both), each from wherever the value is at that moment. CC step has a
+  single `ease-ms`. (`cc-set` has no easing in the design, §2.3.)
 - CC step: each press moves the target by the step (clamped 0..127) and glides
   there; presses during a glide retarget it, building on the old target and
   starting from the current sent value. CC momentary in latch mode toggles

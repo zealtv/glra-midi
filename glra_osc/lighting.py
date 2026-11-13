@@ -296,13 +296,13 @@ def lights_command(profile_path=None, apply_changes=False, out=None, err=None, a
     """
     import sys
 
-    from .profile import ProfileError, load_profile, user_profile_path
+    from .profile import ProfileError, current_profile_path, load_profile
 
     out = sys.stdout if out is None else out
     err = sys.stderr if err is None else err
     lighting = None
     if apply_changes:
-        path = user_profile_path() if profile_path is None else Path(profile_path)
+        path = current_profile_path() if profile_path is None else Path(profile_path)
         try:
             lighting = load_profile(path).lighting
         except ProfileError as exc:

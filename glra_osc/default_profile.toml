@@ -14,7 +14,8 @@
 # Every event takes an optional channel = 1..16 (default: [midi] channel). Fields, with defaults:
 #   Presses (keys and dial pushes):
 #     kind = "note"          note 0..127, velocity 1..127 (127), mode "momentary"|"latch" ("momentary")
-#     kind = "cc-momentary"  cc, low (0), high (127), ease-ms 0..10000 (0), curve (linear),
+#     kind = "cc-momentary"  cc, low (0), high (127), rise-ms 0..10000 (0), fall-ms 0..10000 (0),
+#                            curve (linear; one for both directions),
 #                            mode "momentary"|"latch" ("momentary")
 #     kind = "cc-set"        cc, value 0..127
 #     kind = "cc-step"       cc, step -127..127 but not 0 (negative = dec), ease-ms (0), curve (linear)
@@ -25,7 +26,7 @@
 #     kind = "cc-relative"   cc, encoding "twos-complement" (default) | "binary-offset" | "signed-bit"
 #     kind = "cc-absolute"   cc, step 1..127 (1), initial 0..127 (optional: the start value
 #                            of that channel+cc; two dials may not give different ones)
-#   curve = "linear" | "ease-in" | "ease-out" | "ease-in-out"; ease-ms = 0 jumps.
+#   curve = "linear" | "ease-in" | "ease-out" | "ease-in-out"; a time of 0 jumps.
 #
 # Optional sections (their defaults shown):
 #   [pad]      orientation = "dials-top"   # | dials-right | dials-bottom | dials-left
@@ -46,289 +47,316 @@ channel = 1            # 1..16
 orientation = "dials-top"
 
 [layers]
-count = 4              # 1..8
-# names = ["Drums", "Synth", "", "Mixer"]   # optional; "" is unnamed
+count = 3              # 1..8
+# names = ["Drums", "Synth", "Mixer"]   # optional; "" is unnamed
 
-# Keys: notes 36..51 on layer 1, 52..67 on layer 2, 68..83 on layer 3, 84..99 on layer 4.
+# Dial pushes pick the layer, left to right: layer 1, 2, 3 (the same on every layer).
+
+[enc.1.push]
+kind = "layer-set"
+layer = 1
+
+[enc.2.push]
+kind = "layer-set"
+layer = 2
+
+[enc.3.push]
+kind = "layer-set"
+layer = 3
+
+# Keys: momentary notes 36..51 on every layer, on MIDI channel = the layer number.
 
 [key.1.layers.1]
 kind = "note"
 note = 36
+channel = 1
 
 [key.1.layers.2]
 kind = "note"
-note = 52
+note = 36
+channel = 2
 
 [key.1.layers.3]
 kind = "note"
-note = 68
+note = 36
+channel = 3
 
-[key.1.layers.4]
-kind = "note"
-note = 84
 
 [key.2.layers.1]
 kind = "note"
 note = 37
+channel = 1
 
 [key.2.layers.2]
 kind = "note"
-note = 53
+note = 37
+channel = 2
 
 [key.2.layers.3]
 kind = "note"
-note = 69
+note = 37
+channel = 3
 
-[key.2.layers.4]
-kind = "note"
-note = 85
 
 [key.3.layers.1]
 kind = "note"
 note = 38
+channel = 1
 
 [key.3.layers.2]
 kind = "note"
-note = 54
+note = 38
+channel = 2
 
 [key.3.layers.3]
 kind = "note"
-note = 70
+note = 38
+channel = 3
 
-[key.3.layers.4]
-kind = "note"
-note = 86
 
 [key.4.layers.1]
 kind = "note"
 note = 39
+channel = 1
 
 [key.4.layers.2]
 kind = "note"
-note = 55
+note = 39
+channel = 2
 
 [key.4.layers.3]
 kind = "note"
-note = 71
+note = 39
+channel = 3
 
-[key.4.layers.4]
-kind = "note"
-note = 87
 
 [key.5.layers.1]
 kind = "note"
 note = 40
+channel = 1
 
 [key.5.layers.2]
 kind = "note"
-note = 56
+note = 40
+channel = 2
 
 [key.5.layers.3]
 kind = "note"
-note = 72
+note = 40
+channel = 3
 
-[key.5.layers.4]
-kind = "note"
-note = 88
 
 [key.6.layers.1]
 kind = "note"
 note = 41
+channel = 1
 
 [key.6.layers.2]
 kind = "note"
-note = 57
+note = 41
+channel = 2
 
 [key.6.layers.3]
 kind = "note"
-note = 73
+note = 41
+channel = 3
 
-[key.6.layers.4]
-kind = "note"
-note = 89
 
 [key.7.layers.1]
 kind = "note"
 note = 42
+channel = 1
 
 [key.7.layers.2]
 kind = "note"
-note = 58
+note = 42
+channel = 2
 
 [key.7.layers.3]
 kind = "note"
-note = 74
+note = 42
+channel = 3
 
-[key.7.layers.4]
-kind = "note"
-note = 90
 
 [key.8.layers.1]
 kind = "note"
 note = 43
+channel = 1
 
 [key.8.layers.2]
 kind = "note"
-note = 59
+note = 43
+channel = 2
 
 [key.8.layers.3]
 kind = "note"
-note = 75
+note = 43
+channel = 3
 
-[key.8.layers.4]
-kind = "note"
-note = 91
 
 [key.9.layers.1]
 kind = "note"
 note = 44
+channel = 1
 
 [key.9.layers.2]
 kind = "note"
-note = 60
+note = 44
+channel = 2
 
 [key.9.layers.3]
 kind = "note"
-note = 76
+note = 44
+channel = 3
 
-[key.9.layers.4]
-kind = "note"
-note = 92
 
 [key.10.layers.1]
 kind = "note"
 note = 45
+channel = 1
 
 [key.10.layers.2]
 kind = "note"
-note = 61
+note = 45
+channel = 2
 
 [key.10.layers.3]
 kind = "note"
-note = 77
+note = 45
+channel = 3
 
-[key.10.layers.4]
-kind = "note"
-note = 93
 
 [key.11.layers.1]
 kind = "note"
 note = 46
+channel = 1
 
 [key.11.layers.2]
 kind = "note"
-note = 62
+note = 46
+channel = 2
 
 [key.11.layers.3]
 kind = "note"
-note = 78
+note = 46
+channel = 3
 
-[key.11.layers.4]
-kind = "note"
-note = 94
 
 [key.12.layers.1]
 kind = "note"
 note = 47
+channel = 1
 
 [key.12.layers.2]
 kind = "note"
-note = 63
+note = 47
+channel = 2
 
 [key.12.layers.3]
 kind = "note"
-note = 79
+note = 47
+channel = 3
 
-[key.12.layers.4]
-kind = "note"
-note = 95
 
 [key.13.layers.1]
 kind = "note"
 note = 48
+channel = 1
 
 [key.13.layers.2]
 kind = "note"
-note = 64
+note = 48
+channel = 2
 
 [key.13.layers.3]
 kind = "note"
-note = 80
+note = 48
+channel = 3
 
-[key.13.layers.4]
-kind = "note"
-note = 96
 
 [key.14.layers.1]
 kind = "note"
 note = 49
+channel = 1
 
 [key.14.layers.2]
 kind = "note"
-note = 65
+note = 49
+channel = 2
 
 [key.14.layers.3]
 kind = "note"
-note = 81
+note = 49
+channel = 3
 
-[key.14.layers.4]
-kind = "note"
-note = 97
 
 [key.15.layers.1]
 kind = "note"
 note = 50
+channel = 1
 
 [key.15.layers.2]
 kind = "note"
-note = 66
+note = 50
+channel = 2
 
 [key.15.layers.3]
 kind = "note"
-note = 82
+note = 50
+channel = 3
 
-[key.15.layers.4]
-kind = "note"
-note = 98
 
 [key.16.layers.1]
 kind = "note"
 note = 51
+channel = 1
 
 [key.16.layers.2]
 kind = "note"
-note = 67
+note = 51
+channel = 2
 
 [key.16.layers.3]
 kind = "note"
-note = 83
+note = 51
+channel = 3
 
-[key.16.layers.4]
-kind = "note"
-note = 99
+# Dial turns. Left and middle: relative CC 16 and 17, on MIDI channel = the layer number.
 
-# Dial pushes are layer keys, the same on every layer: previous / layer 1 / next.
-
-[enc.1.push]
-kind = "layer-dec"
-
-[enc.2.push]
-kind = "layer-set"
-layer = 1
-
-[enc.3.push]
-kind = "layer-inc"
-
-# Dial turns: relative CC 16..18 on every layer.
-
-[enc.1.turn]
+[enc.1.turn.layers.1]
 kind = "cc-relative"
 cc = 16
+channel = 1
 
-[enc.2.turn]
+[enc.1.turn.layers.2]
+kind = "cc-relative"
+cc = 16
+channel = 2
+
+[enc.1.turn.layers.3]
+kind = "cc-relative"
+cc = 16
+channel = 3
+
+[enc.2.turn.layers.1]
 kind = "cc-relative"
 cc = 17
+channel = 1
+
+[enc.2.turn.layers.2]
+kind = "cc-relative"
+cc = 17
+channel = 2
+
+[enc.2.turn.layers.3]
+kind = "cc-relative"
+cc = 17
+channel = 3
+
+# Right: one absolute CC 18 on channel 1, global (the same on every layer), starting at 64.
 
 [enc.3.turn]
-kind = "cc-relative"
+kind = "cc-absolute"
 cc = 18
+channel = 1
+initial = 64
