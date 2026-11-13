@@ -100,6 +100,24 @@ class FakePad:
         return ApplyResult(False, new, backup=str(Path(directory) / "fake-lighting-before.json"))
 
 
+def load_hidapi():
+    """Import the `hid` module now, on the calling thread (the UI thread, for `RealPad()`).
+
+    `import hid` initialises hidapi, and on macOS that attaches its IOHIDManager to the run
+    loop of the thread doing the import. `glra_midi.device.backend` imports `hid` lazily, so
+    the first import would otherwise happen on the pad worker thread. At interpreter exit the
+    `hid` module's exit hook closes the manager on the main thread, where it walks that
+    thread's long-dead run loop and the process dies with EXC_BREAKPOINT ("Python quit
+    unexpectedly", `fix-quit-crash`, 2026-11-13). Importing here, on the main thread, ties
+    the manager to a run loop that lives until exit. A failed import is left for `read` to
+    report as "Pad: not found" (`ImportError` is in `PAD_ERRORS`).
+    """
+    try:
+        import hid  # noqa: F401
+    except ImportError:
+        pass
+
+
 class RealPad:
     """The real pad, through `glra_midi.lighting`. Built only by `gui.main` outside `--demo`.
 
@@ -110,6 +128,7 @@ class RealPad:
 
     def __init__(self, data_directory=None):
         self.data_directory = data_directory
+        load_hidapi()
 
     def read(self):
         try:
