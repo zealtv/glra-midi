@@ -23,6 +23,9 @@ release.
 
 ### Fixed
 
+- Config app: [Select] on a Problems row now also switches to the layer the problem names
+  (for a problem at `key.4.layers.3`, layer 3), so the inspector shows the control the message
+  talks about. A problem that names no layer leaves the tab alone.
 - Config app: a profile changed on disk while a confirmation or "Save changes?" dialog is open
   no longer reloads underneath it, so answering OK can't apply an edit built on the old profile
   and drop the reload. The change is noticed right after the dialog closes.

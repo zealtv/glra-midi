@@ -294,6 +294,31 @@ class LayerEditTests(ControllerCase):
         self.assertTrue(self.c.problems[0]["message"].startswith("Key 1 (layer): "))
 
 
+class SelectProblemTests(ControllerCase):
+    def test_select_switches_to_the_layer_the_problem_names(self):
+        # Review 8: [Select] picked the control but left the tab, so the inspector could show
+        # another layer than the one with the problem.
+        controls = dict(self.c.profile.controls)
+        controls["key.4"] = prof.PerLayer.of({3: prof.LayerSet(layer=prof.NO_LAYER)})
+        self.c._edit(replace(self.c.profile, controls=controls))
+        self.c.selectTab(1)
+        index = next(i for i, p in enumerate(self.c.problems) if p["control"] == "key.4")
+        self.assertEqual(self.c.problems[index]["layer"], 3)
+        self.c.selectProblem(index)
+        self.assertEqual(self.c.tab, 3)
+        self.assertEqual(self.c.selected, "key.4")
+
+    def test_a_problem_without_a_layer_in_its_path_leaves_the_tab(self):
+        controls = dict(self.c.profile.controls)
+        controls["enc.3.push"] = prof.LayerSet(layer=7)
+        self.c._edit(replace(self.c.profile, controls=controls))
+        self.c.selectTab(2)
+        self.assertEqual(self.c.problems[0]["layer"], 0)
+        self.c.selectProblem(0)
+        self.assertEqual(self.c.tab, 2)
+        self.assertEqual(self.c.selected, "enc.3.push")
+
+
 class SaveTests(ControllerCase):
     def test_save_writes_the_file_and_clears_dirty(self):
         self.c.renameLayer(2, "Pads")

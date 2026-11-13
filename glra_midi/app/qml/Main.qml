@@ -176,6 +176,7 @@ ApplicationWindow {
                     model: controller.problems
                     RowLayout {
                         required property var modelData
+                        required property int index
                         width: problemColumn.width
                         Text {
                             Layout.fillWidth: true
@@ -189,7 +190,7 @@ ApplicationWindow {
                             text: "Select"
                             pal: root.pal
                             implicitHeight: 26
-                            onClicked: controller.selectControl(modelData.control)
+                            onClicked: controller.selectProblem(index)
                         }
                     }
                 }

@@ -229,6 +229,13 @@ class Controller(QObject):
             text += f" ({field})"
         return f"{text}: {rest}" if rest else text
 
+    def _problem_layer(self, problem):
+        """The layer a problem's path names (`key.4.layers.3…`), or 0 when it names none."""
+        found = _LAYER_IN_PATH.search(problem.message.partition(": ")[0])
+        if found and 1 <= int(found.group(1)) <= self._profile.layer_count:
+            return int(found.group(1))
+        return 0
+
     def _tab_label(self, layer):
         name = self._profile.layer_names[layer - 1]
         return f"{layer} {name}" if name else str(layer)
@@ -369,7 +376,11 @@ class Controller(QObject):
         tabs = [{"index": 0, "label": "Global"}]
         tabs += [{"index": n, "label": self._tab_label(n)} for n in range(1, profile.layer_count + 1)]
         problems = [
-            {"control": p.control or "", "message": self._display_message(p)}
+            {
+                "control": p.control or "",
+                "layer": self._problem_layer(p),
+                "message": self._display_message(p),
+            }
             for p in prof.validate(profile)
         ]
         self._ui = {
@@ -513,6 +524,20 @@ class Controller(QObject):
         if control in prof.CONTROL_NAMES and control != self._selected:
             self._selected = control
             self._refresh()
+
+    @Slot(int)
+    def selectProblem(self, index):
+        """[Select] on a Problems row: show the layer the problem names (when its path names
+        one) and select its control, so the inspector shows what the message talks about."""
+        rows = self._ui["problems"]
+        if not 0 <= index < len(rows):
+            return
+        row = rows[index]
+        if row["layer"]:
+            self._tab = row["layer"]
+        if row["control"] in prof.CONTROL_NAMES:
+            self._selected = row["control"]
+        self._refresh()
 
     @Slot()
     def clearSelection(self):
