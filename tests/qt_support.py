@@ -40,3 +40,21 @@ def write_profile(home, name, text):
     path = prof.profile_path(name, home)
     path.write_text(text, encoding="utf-8")
     return path
+
+
+def forbid_real_device(testcase):
+    """Make any attempt to reach the real pad fail the test (the app tests use fakes only)."""
+    from unittest import mock
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("a test tried to reach the real pad; use a FakePad")
+
+    for target in (
+        "glra_osc.device.backend.enumerate_devices",
+        "glra_osc.device.backend.select",
+        "glra_osc.device.backend.open_device",
+        "glra_osc.lighting.connect",
+    ):
+        patcher = mock.patch(target, refuse)
+        patcher.start()
+        testcase.addCleanup(patcher.stop)

@@ -9,7 +9,13 @@ Files (design 4.8): the profile opens from `profile.current_profile_path()`; Ope
 work inside the profiles folder and call `set_current`, so `glra-osc run` follows. A change
 to the open file, or to `current`, on disk reloads (no unsaved edits) or raises a
 "changed on disk" notice (unsaved edits). `poll()` does that check; `poll_ms` > 0 runs it on a
-timer. Prompts are two signals the window answers: `unsavedPrompt` (Save / Don't save /
+timer.
+
+The device panel (design 4.10, 5): its fields edit the profile like any other. The controller
+holds a *pad object* (`device.py`) and opens no device itself; with none given it uses `NoPad`
+("Pad: not found", no I/O at all). Pad reads and the one lighting write run on a worker thread
+(`padworker.py`). The only call that can write to the pad is `applyLighting`, which QML calls
+from the [Apply to pad] button; no edit, save, open or start-up path calls it. Prompts are two signals the window answers: `unsavedPrompt` (Save / Don't save /
 Cancel, answered by `resolveUnsaved`) and `confirmPrompt` (Yes / No, `resolveConfirm`).
 """
 
@@ -22,7 +28,10 @@ from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
 from .. import orientation as orient
 from .. import profile as prof
 from ..lighting import MODE_BY_NUMBER
+from . import devicepanel as dev
 from . import inspector as insp
+from .device import NoPad, PadReading, describe_reading, not_found
+from .padworker import PadWorker
 from .summary import tile_info
 
 _HEADER_LINES = {line for line in prof.HEADER.splitlines() if line}
@@ -58,10 +67,33 @@ class Controller(QObject):
     confirmPrompt = Signal(str, str)  # title, message; answered with resolveConfirm
     quitApproved = Signal()
 
-    def __init__(self, home=None, poll_ms=0, scheme="system", parent=None):
+    APPLY_COOLDOWN_MS = 1000  # the button stays off this long after a write (design 5.3)
+
+    def __init__(
+        self,
+        home=None,
+        poll_ms=0,
+        scheme="system",
+        parent=None,
+        pad=None,
+        read_on_start=True,
+        cooldown_ms=APPLY_COOLDOWN_MS,
+    ):
         super().__init__(parent)
         self._scheme = scheme
         self._home = home
+        self._pad = NoPad() if pad is None else pad
+        self._worker = PadWorker(self)
+        self._worker.done.connect(self._pad_done)
+        self._cooldown_ms = cooldown_ms
+        self._pad_connected = False
+        self._pad_headline = "Pad: not found" if isinstance(self._pad, NoPad) else "Pad: checking…"
+        self._pad_now = ""
+        self._pad_busy = False  # a read or the Apply write is running
+        self._cooling = False
+        self._last = ""  # the Apply result line
+        self._last_kind = ""  # "ok" | "info" | "err"
+        self._port_draft = None  # (text, error) while the port field holds something invalid
         self._after = None  # what to do once the unsaved-changes prompt is answered
         self._confirmed = None  # what to do on "yes" to a confirmPrompt
         self._error = ""
@@ -83,6 +115,8 @@ class Controller(QObject):
         self._ui = {}
         self._refresh()
         self._timer = None
+        if read_on_start and not isinstance(self._pad, NoPad):
+            self.refreshPad()
         if poll_ms > 0:
             self._timer = QTimer(self)
             self._timer.timeout.connect(self.poll)
@@ -128,6 +162,7 @@ class Controller(QObject):
             return False
         self._path = Path(path)
         self._profile = self._baseline = loaded
+        self._port_draft = None
         self._load_error = ""
         self._error = ""
         self._disk_message = ""
@@ -261,6 +296,45 @@ class Controller(QObject):
             rgb = f"RGB: {mode.name if mode else light.mode}"
         return f'{rgb} · orientation {profile.orientation} · port "{profile.port}" ch {profile.channel}'
 
+    def _can_apply(self):
+        light = self._profile.lighting
+        return (
+            light is not None
+            and not dev.lighting_problem(light)
+            and self._pad_connected
+            and not self._pad_busy
+            and not self._cooling
+        )
+
+    def _device_model(self):
+        """Everything the device panel shows (design 4.10); the QML holds no logic of its own."""
+        profile = self._profile
+        port, port_error = self._port_draft or (profile.port, "")
+        light = dev.describe_lighting(profile.lighting)
+        problem = dev.lighting_problem(profile.lighting)
+        return {
+            "orientation": profile.orientation,
+            "orientations": [
+                {"value": o, "label": f"Dials {o.removeprefix('dials-')}"} for o in prof.ORIENTATIONS
+            ],
+            "port": {"text": port, "error": port_error},
+            "channel": profile.channel,
+            "lighting": light,
+            "pad": {
+                "connected": self._pad_connected,
+                "headline": self._pad_headline,
+                "now": self._pad_now,
+            },
+            "apply": {
+                "enabled": self._can_apply(),
+                "busy": self._pad_busy,
+                "problem": problem,
+                "note": "Each Apply is saved in the pad's memory.",
+                "last": self._last,
+                "lastKind": self._last_kind,
+            },
+        }
+
     def _refresh(self):
         profile = self._profile
         if self._draft_for != (self._selected, self._tab):
@@ -295,6 +369,7 @@ class Controller(QObject):
             "tabs": tabs,
             "problems": problems,
             "inspector": self._inspector(),
+            "device": self._device_model(),
             "canSave": not problems and not self._load_error,
             "canSaveAs": not problems,
         }
@@ -389,6 +464,32 @@ class Controller(QObject):
     def deviceLine(self):
         return self._device_line()
 
+    @Property("QVariantMap", notify=changed)
+    def device(self):
+        return self._ui["device"]
+
+    @Property(str, notify=changed)
+    def padHeadline(self):
+        return self._pad_headline
+
+    @property
+    def pad(self):
+        """The pad object (`FakePad` in tests, `--demo` and captures)."""
+        return self._pad
+
+    def wait_for_pad(self, timeout=5.0):
+        """Run the event loop until the worker has no call outstanding (tests and captures)."""
+        import time
+
+        from PySide6.QtCore import QCoreApplication
+
+        end = time.monotonic() + timeout
+        while not self._worker.idle or self._cooling:
+            QCoreApplication.processEvents()
+            if time.monotonic() > end:
+                raise TimeoutError("the pad worker did not finish")
+            time.sleep(0.005)
+
     # --- tabs, selection, layers --------------------------------------------------------
 
     @Slot(int)
@@ -421,6 +522,119 @@ class Controller(QObject):
             self._refresh()
         elif value != self._profile.orientation:
             self._edit(replace(self._profile, orientation=value))
+
+    # --- the device panel (design 4.10, 5) ----------------------------------------------------
+
+    @Slot(int)
+    def setLightingMode(self, mode):
+        """The mode selector; `-1` ("Leave as it is") removes `[lighting]`. Edits the profile
+        only: nothing reaches the pad until [Apply to pad]."""
+        try:
+            new = dev.with_mode(self._profile.lighting, mode)
+        except dev.lights.LightingError as err:
+            self._fail(err)
+            return
+        if new != self._profile.lighting:
+            self._edit(replace(self._profile, lighting=new))
+
+    @Slot(str, int)
+    def setLightingLevel(self, field, value):
+        """Brightness or speed, 0..4."""
+        self._edit_lighting(lambda light: dev.with_level(light, field, value))
+
+    @Slot(bool)
+    def setLightingColor(self, on):
+        """The "One colour" switch."""
+        self._edit_lighting(lambda light: dev.with_color(light, on))
+
+    @Slot(int, int)
+    def setLightingHsv(self, index, value):
+        """One of hue, saturation, value (index 0, 1, 2), 0..255."""
+        self._edit_lighting(lambda light: dev.with_hsv(light, index, value))
+
+    def _edit_lighting(self, change):
+        try:
+            new = change(self._profile.lighting)
+        except dev.lights.LightingError as err:
+            self._fail(err)
+            return
+        if new != self._profile.lighting:
+            self._edit(replace(self._profile, lighting=new))
+
+    @Slot(str)
+    def setPort(self, text):
+        """The MIDI port name. An invalid one (empty) stays in the field with the profile's
+        message and never reaches the profile."""
+        candidate = replace(self._profile, port=text)
+        bad = [p for p in prof.validate(candidate) if p.message.startswith("midi.port")]
+        if bad:
+            self._port_draft = (text, bad[0].message.partition(": ")[2])
+            self._refresh()
+            return
+        self._port_draft = None
+        if text != self._profile.port:
+            self._edit(candidate)
+        else:
+            self._refresh()
+
+    @Slot(int)
+    def setChannel(self, channel):
+        """The default MIDI channel, 1..16."""
+        if not 1 <= channel <= 16:
+            self._fail(prof.ProfileError(f"midi.channel: expected an integer 1..16, got {channel}"))
+        elif channel != self._profile.channel:
+            self._edit(replace(self._profile, channel=channel))
+
+    @Slot()
+    def refreshPad(self):
+        """Read the pad's state (read-only: status and the 11 lighting bytes) on the worker."""
+        if self._pad_busy:
+            return
+        self._pad_busy = True
+        self._worker.submit("read", self._pad.read)
+        self._refresh()
+
+    @Slot()
+    def applyLighting(self):
+        """[Apply to pad]: the app's one pad write, and only from this slot. Sends the profile's
+        `[lighting]` as shown, on the worker thread, guarded (`lighting.apply`)."""
+        if self._profile.lighting is None:
+            self._last, self._last_kind = dev.NO_LIGHTING, "info"
+            self._refresh()
+            return
+        if not self._can_apply():
+            return
+        self._pad_busy = True
+        self._last, self._last_kind = "", ""
+        directory = prof.app_dir(self._home) / "backups"
+        self._worker.submit("apply", self._pad.apply, self._profile.lighting, directory)
+        self._refresh()
+
+    def _pad_done(self, kind, result, error):
+        """A worker call finished (on the UI thread)."""
+        self._worker.finished_one()
+        self._pad_busy = False
+        if kind == "read":
+            reading = result if error is None else not_found(str(error))
+            self._pad_connected = reading.connected
+            self._pad_headline, self._pad_now = describe_reading(reading)
+        else:
+            if error is not None:
+                self._last, self._last_kind = f"Not applied: {error}", "err"
+            else:
+                self._pad_now = describe_reading(PadReading(True, None, result.payload))[1]
+                if result.unchanged:
+                    self._last, self._last_kind = "Already set.", "info"
+                else:
+                    self._last, self._last_kind = "Applied and read back.", "ok"
+            if self._cooldown_ms > 0:
+                self._cooling = True
+                QTimer.singleShot(self._cooldown_ms, self._end_cooldown)
+        self._refresh()
+
+    def _end_cooldown(self):
+        self._cooling = False
+        self._refresh()
 
     @Slot()
     def addLayer(self):
