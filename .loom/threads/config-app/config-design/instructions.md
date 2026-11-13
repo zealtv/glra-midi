@@ -20,8 +20,10 @@ Cover, each with a decision and a sentence of why:
    is TOML, written with `tomli-w` (a new dependency; `tomllib` only reads),
    at `~/Library/Application Support/glra-osc/profile.toml`. Today's mapping
    files (`glra_osc/default_mapping.toml`) must still load.
-3. **Engine semantics**: resolution order (layer action → layer n event →
-   global event → nothing); what a layer switch does to held notes, held
+3. **Engine semantics**: resolution (a layer action, else the global
+   event of a global control, else the active layer's event, else nothing; a
+   control is global or per-layer, never both, with no fall-through, per Bob's
+   2026-11-13 correction); what a layer switch does to held notes, held
    momentary CCs and running glides (default: a press releases through the
    binding it started with); per-layer latch state; one CC value table per
    (channel, cc) shared by set, inc/dec, momentary and absolute dials; easing
@@ -34,8 +36,8 @@ Cover, each with a decision and a sentence of why:
    add/remove/rename), an inspector for the selected control, a device panel
    (RGB mode, orientation, port). Give a wireframe for each state (ASCII is
    fine), the tile summary text for each action kind, how a layer-select key
-   shows on every tab (locked), how an inherited global event shows on a layer
-   tab (dimmed), dirty/save/revert, validation messages. Module layout under
+   shows on every tab (locked), how a global event shows on each layer
+   tab (marked global), what switching a control between global and per-layer does, dirty/save/revert, validation messages. Module layout under
    `glra_osc/app/`; how the app gets tested without a display
    (`QT_QPA_PLATFORM=offscreen`) and how screenshots get captured for review.
 5. **Lighting**: which firmware modes and parameters the selector offers

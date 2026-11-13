@@ -5,7 +5,9 @@ Suggested model: Sonnet. Build to `docs/config-app.md` (it wins over this file).
 `glra_osc/profile.py`, pure (no I/O beyond reading and writing the file):
 - Frozen dataclasses for the profile: port, default channel, layers (count,
   names), orientation, lighting, and per control either a **layer action**
-  (`set n` | `inc` | `dec`) or **events** keyed by layer (`global` or 1..n).
+  (`set n` | `inc` | `dec`), or one **global** event (the same on all
+  layers), or **per-layer** events keyed 1..n. These three exclude each other;
+  there is no fall-through from a layer to global (Bob, 2026-11-13).
   Press events: note (momentary | latch; note, velocity), cc momentary (low,
   high, easing), cc set (value), cc step (signed step, easing). Each event has
   a channel (default: the profile's). Encoder turns: today's relative and
@@ -19,7 +21,7 @@ Suggested model: Sonnet. Build to `docs/config-app.md` (it wins over this file).
 - Old mapping files load as a one-layer profile with everything global;
   `default_mapping.toml` becomes (or is joined by) a default profile that
   documents the format in comments.
-- Edit helpers the app will call (return a new profile): set/clear an event,
+- Edit helpers the app will call (return a new profile): set/clear an event, switch a control between global and per-layer,
   set a layer action (clearing that control's events), add/remove/rename a
   layer (removing one drops its events).
 - Decide with the design whether `mapping.py` stays as the legacy reader or is

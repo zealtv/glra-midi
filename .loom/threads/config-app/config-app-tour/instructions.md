@@ -13,7 +13,8 @@ numbered steps Bob can follow:
    restore Bob's own (`glean:k16n3-lighting` records his stock payload and the
    red X in Custom mode).
 4. Orientation: each of the four, checked against the pad in hand.
-5. "Readings to confirm": the eight in the goal's `instructions.md`, plus every
+5. "Readings to check in use": the eight in the goal's `instructions.md` (Bob
+   accepted them on 2026-11-13, with reading 2 corrected), plus every
    `questions.md` from the stitches, each with the default that was taken.
 6. "Left for you": review findings not fixed; ideas noted as later.
 

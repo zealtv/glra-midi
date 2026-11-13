@@ -12,7 +12,7 @@ venv ran PySide6 6.10.2 on Python 3.14.
   QML only shows it and calls slots. No profile logic in QML.
 - Pad view: 16 key tiles and 3 dials (push and turn each selectable), placed by
   `orientation.py`. Each tile shows a summary of what it does on the shown
-  layer (text per the design); empty, inherited-from-global and layer-select
+  layer (text per the design); empty, global and layer-select
   states look different.
 - Layer tabs: Global, then 1..n; add, remove, rename. Selecting a tab shows that
   whole layer.

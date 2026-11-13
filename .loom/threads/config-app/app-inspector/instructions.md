@@ -14,8 +14,12 @@ The inspector for the selected control, on the shown layer tab:
     easing time and curve), CC set value, CC inc/dec (step, direction, easing).
 - **Dial turns**: None | Relative CC (encoding) | Absolute CC (initial, step),
   with layer and channel.
-- On a layer tab, a control inheriting a global event shows it read-only with
-  "Override on this layer" and, once overridden, "Use global".
+- A global control shows the same event on every tab, marked global, and can
+  be edited from any tab. Global and per-layer exclude each other (Bob,
+  2026-11-13: no fall-through). Switching a control from per-layer to global
+  replaces its per-layer events with the one event (ask before discarding
+  any); switching from global to layer n follows the design (default: the
+  event stays on the shown layer only, the other layers become empty).
 - Fields validate as typed; errors use the profile's own messages. Note numbers
   also show names (C1 = 36, and say which octave convention).
 - Every edit goes through the `profile-model` edit helpers and updates the
@@ -23,5 +27,5 @@ The inspector for the selected control, on the shown layer tab:
   or controls if the design includes it.
 
 Tests (offscreen): for each action kind, driving the controller's slots yields
-the expected profile; the layer-select rule; override and use-global; invalid
+the expected profile; the layer-select rule; global ↔ per-layer switching both ways; invalid
 input never reaches the profile. Captures of each inspector state.

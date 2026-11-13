@@ -25,15 +25,19 @@ factory firmware. and have an orientation selector." "we can use the
 glra-studio as a starting point. references are things like Novation's
 configuration software or any other popular MIDI hardware configuration tools."
 
-## Claude's readings of the brief (2026-11-13; Bob hasn't confirmed these)
+## Readings of the brief (Claude's, 2026-11-13; Bob corrected 2 and accepted the rest)
 
-These are interpretations, not Bob's words. `config-design` may refine them and
-records what it settled in `docs/config-app.md`; the tour lists them for Bob.
+Bob, 2026-11-13, on seeing these: "regarding point 2 - \"global\" just means it
+is the same on all layers. no fall through mechanism. other than that
+everything looks ok." Reading 2 below is his correction. `config-design`
+records the details it settles in `docs/config-app.md`.
 
 1. "MIDI momentary or latch" means a **note**, momentary or latched (today's
    `mode = "toggle"`).
-2. A control's event on layer n **overrides** its global event; a layer with
-   nothing set for a control falls through to the global event, if any.
+2. **Global means the same on all layers; nothing falls through** (Bob). A
+   control is either global (one event, identical on every layer) or
+   per-layer (an event, or nothing, on each layer separately). It never holds
+   both, and no layer overrides a global event.
 3. **Encoder turns** stay mappable (today's relative and absolute CC kinds) and
    gain a layer and a channel like presses. The brief names only keys and
    encoder presses; without this, layers couldn't change what a dial does.
