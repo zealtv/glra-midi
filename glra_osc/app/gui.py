@@ -83,6 +83,23 @@ def _empty(window, controller):
     controller.openProfile("empty")
 
 
+def _then(*steps):
+    """A capture state that applies `_select` and then calls controller methods in order:
+    each step is `(method name, *args)`."""
+
+    def apply(window, controller):
+        for name, *args in steps:
+            getattr(controller, name)(*args)
+
+    return apply
+
+
+def _bad_note(window, controller):
+    controller.selectTab(1)
+    controller.selectControl("key.1")
+    controller.setField("note", "300")
+
+
 STATES = {
     "default": _select(),
     "empty": _empty,
@@ -96,6 +113,20 @@ STATES = {
     "orientation-right": _select(tab=1, control="key.13", orientation="dials-right"),
     "orientation-bottom": _select(tab=1, orientation="dials-bottom"),
     "orientation-left": _select(tab=1, orientation="dials-left"),
+    "inspector-note": _then(("selectTab", 1), ("selectControl", "key.2")),
+    "inspector-note-global": _then(("selectTab", 2), ("selectControl", "key.1")),
+    "inspector-cc-momentary": _then(("selectTab", 2), ("selectControl", "key.2")),
+    "inspector-cc-set": _then(("selectTab", 1), ("selectControl", "key.3")),
+    "inspector-cc-step": _then(("selectTab", 1), ("selectControl", "key.4")),
+    "inspector-layer-key": _then(("selectTab", 1), ("selectControl", "enc.3.push")),
+    "inspector-turn-relative": _then(("selectTab", 1), ("selectControl", "enc.1.turn")),
+    "inspector-turn-absolute": _then(("selectTab", 1), ("selectControl", "enc.2.turn")),
+    "inspector-empty-key": _then(("selectTab", 3), ("selectControl", "key.6")),
+    "inspector-global-tab": _then(("selectTab", 0), ("selectControl", "key.2")),
+    "inspector-invalid": _bad_note,
+    "inspector-make-global": _then(
+        ("selectTab", 1), ("selectControl", "key.2"), ("setApplies", "global")
+    ),
     "problems": _problems,
     "dialog-unsaved": _unsaved,
     "dialog-remove-layer": _remove_layer,

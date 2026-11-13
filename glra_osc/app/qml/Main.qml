@@ -218,7 +218,7 @@ ApplicationWindow {
             }
             Inspector {
                 objectName: "inspector"
-                Layout.preferredWidth: 280
+                Layout.preferredWidth: 330
                 Layout.fillHeight: true
                 ctl: controller
                 pal: root.pal

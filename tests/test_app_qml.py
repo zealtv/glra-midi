@@ -172,5 +172,101 @@ class InteractionTests(QmlCase):
         self.assertEqual(self.warnings, [])
 
 
+class InspectorTests(QmlCase):
+    def select(self, control, tab=1):
+        self.controller.selectTab(tab)
+        self.controller.selectControl(control)
+        self.settle()
+
+    def type_into(self, name, text):
+        field = self.find(name)
+        self.click(name)
+        QMetaObject.invokeMethod(field, "selectAll")
+        for char in text:
+            QTest.keyClick(self.window, char)
+        self.settle()
+
+    def test_every_kind_and_state_binds_cleanly(self):
+        self.load()
+        c = self.controller
+        for tab in (0, 1, 2):
+            for control in ("key.1", "key.2", "key.4", "key.6", "enc.3.push", "enc.1.turn", "enc.2.turn"):
+                self.select(control, tab)
+        self.select("key.9")
+        for kind in ("note", "cc-momentary", "cc-set", "cc-step"):
+            c.setAction("event")
+            c.setKind(kind)
+            c.setField("note" if kind == "note" else "cc", "300")  # an error showing, too
+            self.settle(5)
+        self.select("enc.3.push")
+        c.setLayerKey("layer-set", 2)
+        self.settle(5)
+        self.assertEqual(self.warnings, [])
+
+    def test_typing_a_number_edits_the_profile(self):
+        self.load()
+        self.select("key.1")
+        self.type_into("field-note", "60")
+        self.assertEqual(self.controller.profile.controls["key.1"].note, 60)
+        self.assertEqual(self.find("field-note").property("text"), "60")
+
+    def test_typing_an_invalid_number_shows_the_message_and_keeps_the_profile(self):
+        self.load()
+        self.select("key.1")
+        self.type_into("field-note", "300")
+        # Typed digit by digit, "3" and "30" were fine and applied; "300" is not and stayed out.
+        self.assertEqual(self.controller.profile.controls["key.1"].note, 30)
+        self.assertEqual(self.find("field-note").property("text"), "300")
+        error = self.find("error-note")
+        self.assertTrue(error.property("visible"))
+        self.assertEqual(error.property("text"), "expected an integer 0..127, got 300")
+
+    def test_the_action_buttons_switch_between_event_layer_and_none(self):
+        self.load()
+        self.select("key.9")
+        self.click("seg-action-event")
+        self.assertEqual(self.controller.profile.controls["key.9"].get(1), prof.Note(note=36))
+        self.click("seg-action-none")
+        self.assertNotIn("key.9", self.controller.profile.controls)
+        self.click("seg-action-layer")
+        self.assertEqual(self.controller.profile.controls["key.9"], prof.LayerInc())
+        self.assertTrue(self.find("layerKeyFields").property("visible"))
+        self.click("seg-layerkey-layer-dec")
+        self.assertEqual(self.controller.profile.controls["key.9"], prof.LayerDec())
+
+    def test_the_applies_buttons_switch_global_and_per_layer(self):
+        self.load()
+        self.select("key.1", 2)
+        self.click("seg-applies-layer")
+        self.assertIsInstance(self.controller.profile.controls["key.1"], prof.PerLayer)
+        self.click("seg-applies-global")
+        self.settle()
+        self.assertEqual(self.controller.profile.controls["key.1"], prof.Note(note=36, velocity=110))
+
+    def test_a_per_layer_control_on_the_global_tab_shows_make_global(self):
+        self.load()
+        self.select("key.2", 0)
+        self.assertTrue(self.find("eachBox").property("visible"))
+        self.assertFalse(self.find("eventFields").property("visible"))
+        self.click("makeGlobal")
+        self.assertTrue(self.find("confirmDialog").property("visible"))
+        self.controller.resolveConfirm(False)
+        self.find("confirmDialog").close()
+
+    def test_a_click_on_also_on_jumps_to_that_layer(self):
+        self.load()
+        self.select("key.2", 1)
+        self.click("alsoOn2")
+        self.assertEqual(self.controller.tab, 2)
+
+    def test_the_latch_switch_edits_the_event(self):
+        self.load()
+        self.select("key.9")
+        self.click("seg-action-event")
+        self.click("field-mode")
+        self.assertEqual(self.controller.profile.controls["key.9"].get(1).mode, "latch")
+        self.click("field-mode")
+        self.assertEqual(self.controller.profile.controls["key.9"].get(1).mode, "momentary")
+
 if __name__ == "__main__":
     unittest.main()

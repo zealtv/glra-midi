@@ -22,6 +22,7 @@ from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
 from .. import orientation as orient
 from .. import profile as prof
 from ..lighting import MODE_BY_NUMBER
+from . import inspector as insp
 from .summary import tile_info
 
 _HEADER_LINES = {line for line in prof.HEADER.splitlines() if line}
@@ -70,6 +71,8 @@ class Controller(QObject):
         self._load_error = ""
         self._tab = 1  # starts on layer 1; 0 is the Global tab
         self._selected = ""
+        self._drafts = {}  # typed field text not (yet) in the profile: key -> (text, error)
+        self._draft_for = None  # the (control, tab) the drafts belong to
         self._note_names = True
         self._path = prof.current_profile_path(home)
         self._profile = prof.Profile()
@@ -225,6 +228,7 @@ class Controller(QObject):
                 "lines": [],
                 "hint": "Click a key or dial to edit.",
                 "count": count,
+                "edit": {"mode": "none"},
             }
         control = self._selected
         shape = prof.control_shape(profile.controls.get(control))
@@ -242,8 +246,9 @@ class Controller(QObject):
             "title": label,
             "subtitle": subtitle,
             "lines": [line for line in lines if line],
-            "hint": "Editing fields arrive in the next update.",
+            "hint": "",
             "count": "",
+            "edit": insp.describe(profile, control, tab, self._drafts, self._note_names),
         }
 
     def _device_line(self):
@@ -258,6 +263,9 @@ class Controller(QObject):
 
     def _refresh(self):
         profile = self._profile
+        if self._draft_for != (self._selected, self._tab):
+            self._drafts = {}
+            self._draft_for = (self._selected, self._tab)
         o = profile.orientation
         keys = []
         for number in range(1, prof.KEY_COUNT + 1):
@@ -460,6 +468,135 @@ class Controller(QObject):
             return
         if edit.profile != self._profile:
             self._edit(edit.profile)
+
+    # --- editing the selected control (the inspector, design 4.5, 4.6) ---------------------
+
+    def _shown_event(self):
+        """The press or turn event of the selected control on the shown tab, or None (nothing
+        there, a layer key, or a per-layer control seen from the Global tab)."""
+        if not self._selected:
+            return None
+        action = self._profile.action(self._selected, self._tab) if self._tab else None
+        if not self._tab:
+            control = self._profile.controls.get(self._selected)
+            action = None if isinstance(control, prof.PerLayer) else control
+        return None if action is None or insp.is_layer_key(action) else action
+
+    def _label(self):
+        return orient.label(self._profile.orientation, self._selected)
+
+    def _fail(self, err):
+        self._error = str(err)
+        self._refresh()
+
+    def _commit(self, edit, title, question):
+        """Apply `edit`; when it throws events away, ask `question` first."""
+        self._drafts = {}
+        if edit.discarded:
+            self._confirmed = lambda: self._edit(edit.profile)
+            self.confirmPrompt.emit(title, question)
+        else:
+            self._edit(edit.profile)
+
+    def _put(self, event):
+        """Set the selected control's event on the shown tab (the Global tab: globally)."""
+        try:
+            edit = prof.set_event(self._profile, self._selected, self._tab or None, event)
+        except prof.ProfileError as err:
+            self._fail(err)
+            return
+        self._drafts = {}
+        self._edit(edit.profile)
+
+    @Slot(str)
+    def setAction(self, action):
+        """The Action row: `"event"` | `"layer"` | `"none"` (a turn's kinds go to `setKind`)."""
+        if not self._selected:
+            return
+        control, tab = self._selected, self._tab or None
+        shape = prof.control_shape(self._profile.controls.get(control))
+        if action == "none":
+            try:
+                edit = prof.clear_event(self._profile, control, tab)
+            except prof.ProfileError as err:
+                self._fail(err)
+                return
+            self._drafts = {}
+            self._edit(edit.profile)
+        elif action == "event":
+            if self._shown_event() is None and not (shape == "per-layer" and tab is None):
+                self._put(insp.default_event("cc-relative" if control in prof.TURN_CONTROLS else "note"))
+        elif action == "layer" and shape != "layer-key" and control not in prof.TURN_CONTROLS:
+            self.setLayerKey("layer-inc", 0)
+
+    @Slot(str)
+    def setKind(self, kind):
+        """Change the shown event to another kind (keeps `cc` and `channel`)."""
+        if not self._selected:
+            return
+        event = self._shown_event()
+        valid = [k for k, _ in (insp.TURN_KINDS if self._selected in prof.TURN_CONTROLS else insp.PRESS_KINDS)]
+        if kind not in valid:
+            self._fail(prof.ProfileError(f"kind: expected one of {', '.join(valid)}, got {kind!r}"))
+        elif event is None or event.kind != kind:
+            self._put(insp.default_event(kind, event))
+
+    @Slot(str, str)
+    def setField(self, key, text):
+        """Set one field of the shown event from typed text. An invalid value stays in the
+        field with the parser's message and never reaches the profile."""
+        event = self._shown_event()
+        if event is None:
+            return
+        try:
+            new = insp.apply_field(event, key, text)
+        except prof.ProfileError as err:
+            self._drafts[key] = (text, str(err))
+            self._refresh()
+            return
+        self._drafts[key] = (text, "")
+        try:
+            edit = prof.set_event(self._profile, self._selected, self._tab or None, new)
+        except prof.ProfileError as err:
+            self._fail(err)
+            return
+        self._edit(edit.profile)
+
+    @Slot(str)
+    def setApplies(self, value):
+        """`"global"`: the shown layer's event applies on every layer (asks before discarding
+        other layers' events). `"layer"`: a global event is copied onto every layer."""
+        control, tab = self._selected, self._tab or None
+        shape = prof.control_shape(self._profile.controls.get(control))
+        try:
+            if value == "global" and shape == "per-layer":
+                edit = prof.make_global(self._profile, control, tab)
+                kept = tab or min(n for n, _ in self._profile.controls[control].events)
+                text = insp.discard_text(self._label(), edit.discarded, kept)
+                self._commit(edit, "Make it global?", text)
+            elif value == "layer" and shape == "global" and tab is not None:
+                self._commit(prof.make_per_layer(self._profile, control), "", "")
+        except prof.ProfileError as err:
+            self._fail(err)
+
+    @Slot(str, int)
+    def setLayerKey(self, kind, layer):
+        """Make the selected press a layer key: `layer-set` (to `layer`), `layer-inc` or
+        `layer-dec`. Asks before discarding the events it held."""
+        control = self._selected
+        if kind not in insp.LAYER_KEY_KINDS or control not in prof.PRESS_CONTROLS:
+            return
+        if kind == "layer-set":
+            key = prof.LayerSet(layer=layer or self._tab or 1)
+        else:
+            key = prof.EVENT_CLASSES[kind]()
+        try:
+            edit = prof.set_layer_key(self._profile, control, key)
+        except prof.ProfileError as err:
+            self._fail(err)
+            return
+        text = insp.discard_text(self._label(), edit.discarded)
+        self._commit(edit, "Make it a layer key?", text)
 
     # --- prompts ------------------------------------------------------------------------
 
