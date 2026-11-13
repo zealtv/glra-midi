@@ -451,6 +451,89 @@ class SharedCcValueTests(unittest.TestCase):
         self.assertEqual(self.e.handle(ev("key.5", "up")), [])
 
 
+class ReloadCarryTests(unittest.TestCase):
+    """A profile reload keeps CC values and CC latches (docs/config-app.md 3.4)."""
+
+    DIAL = '[enc.1.turn]\nkind = "cc-absolute"\ncc = 18\ninitial = 64\n'
+    LATCH = '[key.1]\nkind = "cc-momentary"\ncc = 20\nlow = 5\nhigh = 100\nmode = "latch"\n'
+
+    def reload(self, old, text, **kwargs):
+        profile = parse_profile("version = 1\n" + text)
+        old.release_all()
+        return Engine(profile, layer=old.layer, carry=old, **kwargs)
+
+    def test_the_next_turn_continues_from_the_old_value(self):
+        old = engine(self.DIAL)
+        for _ in range(5):
+            old.handle(ev("enc.1", "cw"))
+        new = self.reload(old, self.DIAL + "# edited\n")
+        self.assertEqual(new.cc_value(1, 18), 69)
+        self.assertEqual(new.handle(ev("enc.1", "cw")), [bytes([0xB0, 18, 70])])
+
+    def test_initial_seeds_only_pairs_the_old_table_lacks(self):
+        old = engine(self.DIAL)
+        old.handle(ev("enc.1", "cw"))
+        new = self.reload(
+            old,
+            '[enc.1.turn]\nkind = "cc-absolute"\ncc = 18\ninitial = 10\n'
+            '[enc.2.turn]\nkind = "cc-absolute"\ncc = 19\ninitial = 30\n',
+        )
+        self.assertEqual(new.cc_value(1, 18), 65)  # the old value wins
+        self.assertEqual(new.cc_value(1, 19), 30)  # new pair: seeded
+
+    def test_cc_step_builds_on_the_carried_value(self):
+        step = '[key.1]\nkind = "cc-step"\ncc = 21\nstep = 8\n'
+        old = engine(step)
+        old.handle(ev("key.1", "down"))
+        new = self.reload(old, step)
+        self.assertEqual(new.handle(ev("key.1", "down")), [bytes([0xB0, 21, 16])])
+
+    def test_the_carry_is_a_copy(self):
+        old = engine(self.DIAL)
+        new = self.reload(old, self.DIAL)
+        new.handle(ev("enc.1", "cw"))
+        self.assertEqual(old.cc_value(1, 18), 64)
+
+    def test_a_latched_cc_stays_latched_across_an_unchanged_reload(self):
+        old = engine(self.LATCH)
+        old.handle(ev("key.1", "down"))
+        new = self.reload(old, self.LATCH + "# edited\n")
+        self.assertEqual(new.cc_value(1, 20), 100)
+        self.assertEqual(new.handle(ev("key.1", "down")), [bytes([0xB0, 20, 5])])  # unlatches
+
+    def test_a_latched_cc_drops_when_the_control_changes(self):
+        old = engine(self.LATCH)
+        old.handle(ev("key.1", "down"))
+        new = self.reload(old, self.LATCH.replace("high = 100", "high = 90"))
+        self.assertEqual(new.handle(ev("key.1", "down")), [bytes([0xB0, 20, 90])])  # latches afresh
+
+    def test_a_latched_cc_drops_when_the_control_goes_per_layer_or_away(self):
+        for text in (
+            "[layers]\ncount = 2\n" + self.LATCH.replace("[key.1]", "[key.1.layers.1]"),
+            '[key.1]\nkind = "cc-set"\ncc = 20\nvalue = 1\n',
+            "",
+        ):
+            with self.subTest(text=text):
+                old = engine(self.LATCH)
+                old.handle(ev("key.1", "down"))
+                new = self.reload(old, text)
+                self.assertEqual(new._latched_ccs, set())
+
+    def test_a_per_layer_latch_is_kept_per_layer(self):
+        text = "[layers]\ncount = 2\n" + self.LATCH.replace("[key.1]", "[key.1.layers.2]")
+        old = engine(text, layer=2)
+        old.handle(ev("key.1", "down"))
+        new = self.reload(old, text)
+        self.assertEqual(new.layer, 2)
+        self.assertEqual(new.handle(ev("key.1", "down")), [bytes([0xB0, 20, 5])])
+
+    def test_a_latched_cc_with_the_same_event_on_a_moved_layer_drops(self):
+        old = engine("[layers]\ncount = 2\n" + self.LATCH.replace("[key.1]", "[key.1.layers.2]"), layer=2)
+        old.handle(ev("key.1", "down"))
+        new = self.reload(old, "[layers]\ncount = 2\n" + self.LATCH.replace("[key.1]", "[key.1.layers.1]"))
+        self.assertEqual(new._latched_ccs, set())
+
+
 class DescribeTests(unittest.TestCase):
     def test_describe(self):
         self.assertEqual(describe(bytes([0x90, 36, 127])), "90 24 7f  ch 1  note on  36  vel 127")

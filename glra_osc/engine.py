@@ -92,9 +92,12 @@ class _Glide:
 
 
 class Engine:
-    def __init__(self, profile, layer=1, on_layer=None):
+    def __init__(self, profile, layer=1, on_layer=None, carry=None):
         """`layer` is where to start (1 if it doesn't exist in this profile); `on_layer`,
-        when given, is called as `on_layer(old, new)` after every layer change."""
+        when given, is called as `on_layer(old, new)` after every layer change. `carry`, when
+        given, is the engine this one replaces on a profile reload: its CC values carry over
+        (`initial` seeds only the pairs it lacks) and so do its CC latches that the new profile
+        still holds unchanged (docs/config-app.md 3.4)."""
         self.profile = profile
         self.on_layer = on_layer
         self._layer = layer if 1 <= layer <= profile.layer_count else 1
@@ -105,7 +108,7 @@ class Engine:
         # (control, layer or None) for latched CC momentaries that sit at `high`
         self._latched_ccs = set()
         # (channel 0..15, cc) -> last value; absolute dials seed it from `initial`
-        self._cc = {}
+        self._cc = dict(carry._cc) if carry is not None else {}
         # (channel 0..15, cc) -> the running _Glide; insertion order is tick order
         self._glides = {}
         self._next_due = None
@@ -114,6 +117,23 @@ class Engine:
             for event in events:
                 if isinstance(event, CcAbsolute) and event.initial is not None:
                     self._cc.setdefault((self._channel(event), event.cc), event.initial)
+        if carry is not None:
+            for binding in carry._latched_ccs:
+                if self._holds_latched_cc(binding, carry.profile):
+                    self._latched_ccs.add(binding)
+
+    def _holds_latched_cc(self, binding, old_profile):
+        """Does this profile bind `binding` (control, layer or None) to the same latched
+        `cc-momentary` the old profile did?"""
+        name, layer = binding
+        old, new = old_profile.controls.get(name), self.profile.controls.get(name)
+        if layer is None:
+            old_event = old if not isinstance(old, PerLayer) else None
+            new_event = new if not isinstance(new, PerLayer) else None
+        else:
+            old_event = old.get(layer) if isinstance(old, PerLayer) else None
+            new_event = new.get(layer) if isinstance(new, PerLayer) else None
+        return isinstance(new_event, CcMomentary) and new_event.mode == "latch" and new_event == old_event
 
     @property
     def layer(self):
