@@ -728,9 +728,10 @@ class NoLegacyTests(unittest.TestCase):
             message = str(ctx.exception)
             self.assertTrue(message.startswith("m.toml: version: required"), message)
 
-    def test_the_old_default_mapping_file_doesnt_load(self):
+    def test_an_old_style_mapping_doesnt_load(self):
+        old = '[midi]\nchannel = 1\n\n[keys]\n1 = { note = 36 }\n'
         with self.assertRaises(ProfileError) as ctx:
-            load_profile("glra_osc/default_mapping.toml")
+            parse_profile(old, source="old.toml")
         self.assertIn("version", str(ctx.exception))
 
 

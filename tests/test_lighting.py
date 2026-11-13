@@ -176,7 +176,7 @@ class PayloadTests(unittest.TestCase):
         self.assertEqual(lighting.changes(STOCK, STOCK), [])
 
     def test_lighting_is_never_imported_by_load_run_or_profile(self):
-        for name in ("profile.py", "runner.py", "engine.py", "monitor.py", "mapping.py"):
+        for name in ("profile.py", "runner.py", "engine.py", "monitor.py"):
             source = (Path(lighting.__file__).parent / name).read_text()
             with self.subTest(module=name):
                 self.assertNotIn("from .lighting", source)

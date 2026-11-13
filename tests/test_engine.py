@@ -17,7 +17,7 @@ def engine(text, **kwargs):
 
 
 def one_layer_default():
-    """Today's old default mapping as a profile: keys 1..16 are notes 36..51, dial pushes are
+    """The pre-profile default mapping, as a profile: keys 1..16 are notes 36..51, dial pushes are
     notes 52..54, dial turns are relative CC 16..18; one layer, everything global."""
     parts = ["[layers]\ncount = 1\n"]
     parts += [f'[key.{n}]\nkind = "note"\nnote = {35 + n}\n' for n in range(1, 17)]

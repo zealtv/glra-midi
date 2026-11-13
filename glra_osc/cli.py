@@ -28,9 +28,15 @@ def main(argv=None):
     typing_help = "run even if the pad can't be silenced (it then types into the focused app)"
     mon.add_argument("--allow-typing", action="store_true", help=typing_help)
     run_p = sub.add_parser("run", help="send the pad's controls as MIDI on a virtual port")
-    run_p.add_argument("--config", metavar="FILE", help="mapping file (default: the shipped one)")
     run_p.add_argument(
-        "--dry-run", action="store_true", help="print the MIDI instead of sending it"
+        "--config",
+        metavar="FILE",
+        help="play this profile file (default: the profile named in the app folder's `current`)",
+    )
+    run_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print pad events, layer changes and the MIDI instead of sending it",
     )
     run_p.add_argument("--allow-typing", action="store_true", help=typing_help)
     lights = sub.add_parser(
@@ -65,12 +71,12 @@ def main(argv=None):
             print(f"glra-osc: {err}", file=sys.stderr)
             return 2
     if args.command == "run":
-        from .mapping import MappingError
+        from .profile import ProfileError
         from .runner import run
 
         try:
             return run(config=args.config, dry_run=args.dry_run, allow_typing=args.allow_typing)
-        except MappingError as err:
+        except ProfileError as err:
             print(f"glra-osc: {err}", file=sys.stderr)
             return 2
     if args.command == "lights":

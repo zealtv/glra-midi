@@ -20,8 +20,7 @@ exactly one of three things, and the types below make that so:
 There is no fall-through from a layer to a global event (Bob, 2026-11-13).
 
 `parse_profile` / `load_profile` validate text into the frozen dataclasses and raise
-`ProfileError`, whose message starts with the key path (as `mapping.py` does for
-`MappingError`). `validate` does the same for a `Profile` built in code (the edit
+`ProfileError`, whose message starts with the key path. `validate` does the same for a `Profile` built in code (the edit
 helpers can leave a profile with problems, such as a layer key that points past the
 last layer after a layer is removed) and returns every problem. `dump_profile` writes a
 file that parses back to an equal profile.
