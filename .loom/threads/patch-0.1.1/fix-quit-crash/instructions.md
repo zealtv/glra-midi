@@ -1,7 +1,7 @@
 # fix-quit-crash — "Python quit unexpectedly" when closing the app
 
 Bob, 2026-11-13: "i get a python quit unexpectedly popup upon closing the app."
-macOS kept three reports (18:11, 18:14, 18:42); one is in `../evidence/`. All
+macOS kept three reports (18:11, 18:14, 18:42); the exception and stack of one are in `../evidence/quit-crash-184200-stack.txt` (machine IDs removed). All
 show the same main-thread stack: EXC_BREAKPOINT in `CFRunLoopRemoveSource` ←
 `IOHIDDeviceUnscheduleFromRunLoop` ← `IOHIDManagerClose` ← hidapi's `hid_exit`,
 called from Python at interpreter exit.

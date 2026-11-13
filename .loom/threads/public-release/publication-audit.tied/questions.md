@@ -29,3 +29,18 @@ Details in `audit.md`.
    `git filter-repo` pass before the first push would do both; every commit
    hash changes, and open worktrees/branches would need recreating.
    *Default taken:* no rewrite.
+
+## Bob's answers (2026-11-13)
+
+Bob: "go with your suggestions". Claude's suggestions, as applied the same evening:
+
+1. Primitives' licence: left as is (they read as GPL-3.0-only here).
+2. `zealtv/*` links: checked by Claude with `gh`, 2026-11-13: glean, loom,
+   nestlings, groundhog and lore all public. Links stay.
+3. Crash report: replaced in local history (never pushed) by
+   `quit-crash-184200-stack.txt`, the exception and crashing stack only, via
+   `git filter-branch` over `ed2b147^..main`; the key's prefix quoted in
+   `audit.md` blanked the same way. Every commit hash from `ed2b147` on changed;
+   a pre-rewrite bundle sat in the orchestrator's scratchpad.
+4. Masses Chip contact in lore: accepted (a published company contact).
+5. `Claude-Session:` trailers: kept. No other rewrite.
