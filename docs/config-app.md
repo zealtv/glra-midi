@@ -14,7 +14,10 @@ all layers. no fall through mechanism"), `glean:k16n3-lighting`,
 
 Unless a line names Bob, each decision below is **Claude's default**. Defaults
 that Bob might well want differently are listed in that stitch's
-`questions.md`; the tour puts them in front of him.
+`questions.md`; the tour puts them in front of him. Bob answered the nine
+questions on 2026-11-13 (`lore:2026-11-13-config-design-answers`; his words
+and the readings taken sit in `config-design.tied/questions.md`);
+`loom:design-answers` applied them here, and section 7 lists them.
 
 Contents: 1 references · 2 profile format · 3 engine · 4 app · 5 lighting ·
 6 orientation · 7 open questions.
@@ -44,24 +47,55 @@ share one layout, and the app takes it:
 
 ## 2. Profile format
 
-**Decision:** a TOML file, read with `tomllib`, written with `tomli-w` (new
-dependency, pinned like the others), at
-`~/Library/Application Support/glra-osc/profile.toml`. *Why:* the repo already
+**Decision:** TOML files, one per profile, read with `tomllib`, written with
+`tomli-w` (new dependency, pinned like the others). *Why:* the repo already
 uses TOML for mappings, Bob can hand-edit it, and `tomli-w` writes the subset
 we need with stable output.
 
+Bob, 2026-11-13 (Q7): "lets put the profile in the application folder and have
+some sort of pointer to the current one." Claude's reading, same day: the
+application folder is `~/Library/Application Support/glra-osc/` (`APP_DIR_NAME`),
+and it holds
+
+```
+glra-osc/
+  profiles/default.toml, drums.toml, ...   one file per profile
+  current                                  one line: the active profile's name
+```
+
+- **A profile's name** is its file name without `.toml` (`drums`). A name is
+  non-empty, at most 100 characters, with no `/`, `\` or NUL and no leading
+  `.`; the window title and the pointer use it.
+- **`current`** holds one name. The app and `glra-osc run` both follow it, so
+  switching profile in the app switches what `run` plays (the runner reloads
+  when the pointer or the file it names changes).
+- **Helpers** in `profile.py`: `app_dir()`, `profiles_dir()`,
+  `current_profile_path()` and `set_current(name)` (each takes an optional
+  `home` for tests).
+  - `current_profile_path()` returns `profiles/<name>.toml` for the name in
+    `current`. When `current` is missing, empty, invalid or names a file that
+    doesn't exist, it falls back to `profiles/default.toml`, first creating that
+    file from the shipped default if it's missing (it never overwrites an
+    existing file). It writes `current` (as `default`) only when `current` was
+    missing; it never rewrites a pointer that exists.
+  - `set_current(name)` checks the name and that its file exists
+    (`ProfileError` otherwise), then writes `current` atomically (temp file and
+    rename, as for a profile, 2.8).
+- A profile can carry no path of its own; `load_profile(path)` still reads any
+  file, for `--config` and tests.
+
 Bob, 2026-11-13 (`loom:public-release`, off the queue): after the tour the
-project becomes glra-midi. The path then becomes
-`~/Library/Application Support/glra-midi/profile.toml`; that rename should
-move an existing `glra-osc` profile across (or read it as a fallback). Code
-should take the directory name from one constant so the rename touches one
-line. (Q9.)
+project becomes glra-midi. The folder then becomes
+`~/Library/Application Support/glra-midi/`; that rename should move an
+existing `glra-osc` folder across (or read it as a fallback). Code should take
+the directory name from one constant so the rename touches one line. Bob on
+that plan (Q9): "sounds good."
 
 ### 2.1 Top level
 
 | Key / table | Meaning | Default |
 | --- | --- | --- |
-| `version = 1` | Marks a profile. A file without it loads as a **legacy mapping** (2.6). | required |
+| `version = 1` | Marks a profile. A file without it is an error (2.6). | required |
 | `[midi] port` | Virtual MIDI port name. | `"GLRA K16"` |
 | `[midi] channel` | Default channel 1..16 for events that don't name one. | `1` |
 | `[pad] orientation` | `"dials-top"` \| `"dials-right"` \| `"dials-bottom"` \| `"dials-left"` (section 6). | `"dials-top"` |
@@ -101,7 +135,7 @@ Every event takes an optional `channel` (1..16; default `[midi] channel`).
 | `kind` | Fields (default) | Bob's words |
 | --- | --- | --- |
 | `note` | `note` 0..127, `velocity` 1..127 (127), `mode` = `"momentary"` \| `"latch"` ("momentary") | "MIDI momentary or latch" |
-| `cc-momentary` | `cc`, `low` (0), `high` (127), `ease-ms` 0..10000 (0), `curve` ("linear"), `mode` = `"momentary"` \| `"latch"` ("momentary") | "CC momentary (low and high value with easing)" |
+| `cc-momentary` | `cc`, `low` (0), `high` (127), `rise-ms` 0..10000 (0), `fall-ms` 0..10000 (0), `curve` ("linear"), `mode` = `"momentary"` \| `"latch"` ("momentary") | "CC momentary (low and high value with easing)" |
 | `cc-set` | `cc`, `value` 0..127 | "CC set value" |
 | `cc-step` | `cc`, `step` −127..127, not 0, `ease-ms` (0), `curve` ("linear") | "CC inc or dec with easing" |
 | `layer-set` | `layer` 1..count | "set layer (n)" |
@@ -110,13 +144,16 @@ Every event takes an optional `channel` (1..16; default `[midi] channel`).
 
 `curve` = `"linear"` \| `"ease-in"` \| `"ease-out"` \| `"ease-in-out"`.
 
-- `cc-momentary` with `mode = "latch"` exists so that today's toggled CC keys
-  (`mode = "toggle"` on a `cc` binding) load without loss; the app offers it
-  as a "Latch" switch, as for notes. (Question Q1.)
+- `cc-momentary` with `mode = "latch"`: the app offers it as a "Latch" switch,
+  as for notes (Claude's default; Bob, Q1, didn't object to it).
 - `cc-step` direction lives in the sign of `step`; the app shows it as
   "Inc / Dec" plus a size. *Why:* one field, no impossible combinations.
-- One `ease-ms` and `curve` serve both directions of `cc-momentary`.
-  (Question Q2.)
+- `cc-momentary` has a time for each direction: `rise-ms` for the glide up to
+  `high`, `fall-ms` for the glide back down to `low`. Bob, 2026-11-13 (Q2):
+  "sepearate rise and fall please." Claude's reading: one `curve` serves both
+  (the same shape in each direction); a per-direction curve stays a later
+  option. `cc-step` keeps a single `ease-ms` and `curve`, since it only moves
+  one way per press.
 
 ### 2.4 Turn kinds (`enc.N.turn`)
 
@@ -173,7 +210,8 @@ kind = "cc-momentary"
 cc = 20
 low = 10
 high = 120
-ease-ms = 250
+rise-ms = 250
+fall-ms = 600
 curve = "ease-out"
 channel = 2
 
@@ -225,40 +263,40 @@ cc = 17
 encoding = "binary-offset"
 ```
 
-### 2.6 Legacy mapping files
+### 2.6 Old mapping files
 
-A file without `version` goes through today's `mapping.py` parser unchanged and
-converts to a one-layer profile with every control global:
+Bob, 2026-11-13 (Q1): "i don't care about todays mapping files, we can hard
+break." **Decision:** `profile.py` reads profiles only. A file without
+`version` fails with `version: required; a profile starts with \`version = 1\``
+(an old mapping file also fails on the unknown tables it holds); there is no
+conversion, no "legacy" notice in the app and no `is_legacy_mapping`.
 
-| Mapping | Profile |
-| --- | --- |
-| `[global] port, channel` | `[midi] port, channel` |
-| `note … mode = "momentary"\|"toggle"` | `note … mode = "momentary"\|"latch"` |
-| `cc, on, off, mode` | `cc-momentary`, `high = on`, `low = off`, `mode` (toggle → latch), `ease-ms = 0` |
-| `type = "relative"` | `cc-relative` |
-| `type = "absolute", initial, step` | `cc-absolute`, `initial`, `step` |
-
-**Decision:** `mapping.py` stays as the legacy reader only (and the adapter
-for `Engine` until `layer-engine` lands); new code reads `profile.py`.
-`default_mapping.toml` stays shipped for `--config` and tests. *Why:* the
-legacy path then stays tested by the tests it already has.
-
-Saving a legacy file from the app writes a profile (with `version = 1`), to
-the user's profile path unless Bob chose Save As; the app says so in the
-status line ("Opened an old mapping file; it will be saved as a profile").
+Until `runner-profile` switches `run` to profiles, `run` still reads a mapping
+through `mapping.py` and `default_mapping.toml`, and `runner.py` holds a
+small private adapter that turns the mapping into an `Engine` profile.
+`runner-profile` deletes the adapter, `mapping.py`, `default_mapping.toml` and
+their tests when it makes that switch.
 
 ### 2.7 The default profile
 
-`glra_osc/default_profile.toml`, comments documenting the format (like
-`default_mapping.toml` does). Content (Claude's default, Q3):
+`glra_osc/default_profile.toml`, comments documenting the format. The app
+and `run` copy it to `profiles/default.toml` when there is no profile (2).
 
-- 4 layers, unnamed.
-- Keys: per-layer notes, `36 + 16 × (layer − 1) + (key − 1)`, so layer 1 plays
-  36–51 as today, layer 2 52–67, layer 3 68–83, layer 4 84–99.
-- Dial pushes: `enc.1.push` = layer-dec, `enc.2.push` = layer-set 1,
-  `enc.3.push` = layer-inc.
-- Dial turns: global `cc-relative` 16, 17, 18 as today.
-- No `[lighting]`.
+Bob, 2026-11-13 (Q3): "three layers selected by encoder presses. all buttons
+midi momentary. channels 1, 2, and 3 depending on layer. left and middle
+encoder inc and dec on some cc, channel changes with layer. right encoder is
+absolute and global." Claude's reading, same day:
+
+- 3 layers, unnamed.
+- Dial pushes: `enc.1.push` = layer-set 1, `enc.2.push` = layer-set 2,
+  `enc.3.push` = layer-set 3 (left to right, dials along the top).
+- Keys: per-layer momentary `note` events, note `36 + (key − 1)` (36..51) on
+  every layer, with `channel` = the layer number.
+- Left and middle dial turns (`enc.1.turn`, `enc.2.turn`): per-layer
+  `cc-relative`, CC 16 and CC 17, `channel` = the layer number.
+- Right dial turn (`enc.3.turn`): global `cc-absolute`, CC 18, channel 1,
+  step 1, `initial` 64.
+- No `[lighting]`. `[midi] channel` stays 1.
 
 ### 2.8 Writing
 
@@ -343,10 +381,10 @@ already playing.
 | --- | --- | --- |
 | `note` momentary | Note On (velocity) | Note Off |
 | `note` latch | toggles: Note On or Note Off | nothing |
-| `cc-momentary` momentary | glide to `high` | glide to `low` |
-| `cc-momentary` latch | toggles the target between `high` and `low`, glides | nothing |
+| `cc-momentary` momentary | glide to `high` over `rise-ms` | glide to `low` over `fall-ms` |
+| `cc-momentary` latch | toggles the target between `high` (over `rise-ms`) and `low` (over `fall-ms`) | nothing |
 | `cc-set` | cancels any glide; sends `value` (always, even if unchanged) | nothing |
-| `cc-step` | target = (current target, or the value if none) + `step`, clamped 0..127; glide there | nothing |
+| `cc-step` | target = (current target, or the value if none) + `step`, clamped 0..127; glide there over `ease-ms` | nothing |
 | `cc-absolute` (turn) | cancels any glide; value ± `step`, clamped; sends only on change | — |
 | `cc-relative` (turn) | one delta per detent, as today | — |
 
@@ -359,23 +397,26 @@ Note Off, as today (no reference counting).
 ### 3.6 Glides
 
 - A glide on (channel, cc) holds: start value, target, start time `t0`,
-  duration `d` (the event's `ease-ms`), curve.
+  duration `d` (the time of the direction: 3.6 below), curve.
 - Value at time t: `start + (target − start) × f(min(1, (t − t0)/d))`, rounded
   to the nearest integer, sent only when that integer differs from the last
   value sent on that (channel, cc). It ends exactly on the target at
   `t ≥ t0 + d`.
 - Curves, with p in 0..1: linear `p`; ease-in `p²`; ease-out `1 − (1 − p)²`;
   ease-in-out `2p²` for p < ½, else `1 − 2(1 − p)²`. (Quadratic; Q4.)
-- **The duration is the full `ease-ms` for each new target**, not scaled by the
-  distance. *Why:* a step key then always takes the time it shows.
+- **The duration is the full time of the direction for each new target**, not
+  scaled by the distance: `rise-ms` for a `cc-momentary` press (or latching
+  on), `fall-ms` for its release (or latching off), `ease-ms` for `cc-step`.
+  *Why:* a key then always takes the time it shows.
 - **A second press during a glide retargets** it: the new glide starts from the
   current sent value at the event's `t`, aims at the new target, and takes the
   full time again. For `cc-step` the new target builds on the old target, so
   three quick +8 presses from 0 end at 24.
 - **One glide per (channel, cc).** Any later event on that pair (another
   glide, a `cc-set`, an absolute turn) replaces it.
-- `ease-ms = 0` jumps: the message goes out from `handle` itself.
-- `handle(event)` with `ease-ms > 0` starts the glide and returns nothing (the
+- A time of 0 jumps: the message goes out from `handle` itself. (`rise-ms = 0`
+  with `fall-ms = 250` jumps up and glides down.)
+- `handle(event)` with a time above 0 starts the glide and returns nothing (the
   value at progress 0 equals the start); `tick(now)` returns what is due;
   `next_due()` returns the time of the next tick, or `None` when nothing
   glides.
@@ -438,7 +479,7 @@ pad, inspector on the right, device panel as a collapsible strip at the
 bottom.
 
 ```
-┌─ glra-osc config — profile.toml • ─────────────────────────────────────────┐
+┌─ glra-osc config — default • ───────────────────────────────────────────┐
 │ [Open…] [Save] [Save As…] [Revert]                    Pad: connected (103) │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ ( Global ) [ 1 Drums ] ( 2 Synth ) ( 3 ) ( 4 Mixer ) [+]         [Rename…] │
@@ -485,7 +526,7 @@ differs from `[midi] channel`, as `ch 10`):
 | --- | --- | --- |
 | note momentary | `Note C1` (`36` when names are off) | `vel 110` |
 | note latch | `Note C#1` | `latch · vel 127` |
-| cc-momentary | `CC20 10↔120` | `250 ms ease-out` (or `latch`, or blank at 0 ms) |
+| cc-momentary | `CC20 10↔120` | `↑250 ↓600 ms ease-out` (`latch` added in latch mode; blank when both times are 0) |
 | cc-set | `CC21 = 64` | — |
 | cc-step | `CC21 +8` / `CC21 −8` | `120 ms` (blank at 0 ms) |
 | layer-set | `→ L1` | the layer name if any |
@@ -528,7 +569,7 @@ replaces the profile; tiles update at once.
 │ Also on: L2 CC20 10↔120 · L3 — · L4 — │
 ```
 
-- Kind `CC momentary`: Low, High, Ease ms, Curve, Latch.
+- Kind `CC momentary`: Low, High, Rise ms, Fall ms, Curve, Latch.
 - Kind `CC set`: CC, Value.
 - Kind `CC inc/dec`: CC, (•) Inc ( ) Dec, Step size 1..127, Ease ms, Curve.
 - "Also on" lists the control's other layers (per-layer controls only); a
@@ -590,21 +631,32 @@ other layers silently. (Q5.)
 - The app's shown tab doesn't change the engine's active layer; the app plays
   nothing (reading 6).
 
-### 4.8 Files: dirty, save, revert
+### 4.8 Files: profiles, dirty, save, revert
 
-- On start the app opens the user's profile path; if it's missing, it opens the
-  default profile marked dirty, and the first Save creates the user's file
-  (and its directory).
-- Open… reads any profile or legacy mapping (2.6). Save writes atomically
-  (2.8). Save As… picks a path; the window then edits that file.
-- Revert re-reads the file from disk after a confirm when dirty.
-- Quit, Open… and Revert ask "Save changes to profile.toml?" (Save / Don't save /
+Profiles live in the profiles folder and `current` names the active one (2;
+Bob, Q7). Claude's reading of how the app works within that:
+
+- **Start:** the app opens `current_profile_path()`. When there is no
+  profile, that helper creates `profiles/default.toml` from the shipped
+  default, so the app starts on a saved file and nothing is dirty.
+- **Window title:** the profile's name, as in `glra-osc config — drums •`
+  (`•` marks unsaved changes).
+- **Open…** lists the profiles in `profiles/` by name (not a free file
+  dialog); choosing one loads it and calls `set_current(name)`, so `run`
+  follows. **Save As…** asks for a name, writes `profiles/<name>.toml`, then
+  calls `set_current(name)`; an existing name asks before overwriting. Files
+  outside the folder don't open from the app this round (`load_profile` still
+  reads any path for `--config` and tests).
+- **Save** writes the open profile atomically (2.8).
+- **Revert** re-reads the file from disk after a confirm when dirty.
+- Quit, Open… and Revert ask "Save changes to drums?" (Save / Don't save /
   Cancel) when dirty.
 - No undo stack this round (Revert covers the big mistake); note it in the
-  tour's "later" list.
-- If the file changes on disk while open and the app has no unsaved edits, it
-  reloads; with unsaved edits it shows "profile.toml changed on disk" with
-  [Reload] [Keep mine].
+  tour's "later" list, with renaming and deleting profiles in the app.
+- If the open profile's file, or `current`, changes on disk while the app has
+  no unsaved edits, it reloads (when `current` now names another profile, it
+  switches to that one); with unsaved edits it shows "drums changed on disk"
+  with [Reload] [Keep mine].
 
 ### 4.9 Validation
 
@@ -808,11 +860,20 @@ So in dials-right, displayed key 1 = `key.13`, displayed key 4 = `key.1`.
 
 ---
 
-## 7. Open questions for Bob
+## 7. Bob's answers to the questions
 
-Listed with the default taken in
-`.loom/threads/config-app/config-design.stitching/questions.md`. In short:
-Q1 latch on CC momentary; Q2 one ease time both ways; Q3 the default
-profile's layout; Q4 quadratic curves; Q5 global → per-layer copies to every
-layer; Q6 lighting mode names and fields; Q7 profile location; Q8 the
-starting layer; Q9 the profile path across the glra-midi rename. The tour lists them all.
+Bob answered all nine on 2026-11-13 (`lore:2026-11-13-config-design-answers`;
+his words, with the readings Claude took, in
+`.loom/threads/config-app/config-design.tied/questions.md`). Where each landed:
+
+- **Q1** latch on CC momentary: stands. Old mapping files stop loading (2.6).
+- **Q2** separate `rise-ms` and `fall-ms`, one `curve` (2.3, 3.5, 3.6).
+- **Q3** the default profile: three layers, layer-set pushes, notes by channel (2.7).
+- **Q4** quadratic curves: stand (3.6).
+- **Q5** global → per-layer copies to every layer: stands (4.6).
+- **Q6** lighting names and fields: stand; the tour checks them at the pad (5.1).
+- **Q7** a profiles folder and a `current` pointer (2, 4.8).
+- **Q8** `run` starts on layer 1: stands (3.2).
+- **Q9** the profile folder across the glra-midi rename: "sounds good" (2).
+
+The tour still shows Bob the choices he said to check there (Q6).
