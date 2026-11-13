@@ -19,6 +19,7 @@ glra-osc run --dry-run        # print the MIDI messages instead of sending them
 glra-osc run --config my.toml # use your own mapping file
 glra-osc monitor              # read-only live view of decoded control events
 glra-osc monitor --raw        # ...plus each raw report as hex
+glra-osc monitor --profile p.toml  # number events as displayed in the profile's [pad] orientation
 glra-osc unsilence            # remove glra-osc's key-mapping entries from the pad
 ```
 
@@ -26,6 +27,12 @@ glra-osc unsilence            # remove glra-osc's key-mapping entries from the p
   notes 36-51, the three encoders send relative CCs 16-18, and their pushes send notes 52-54.
   Copy that file, edit it and pass it with `--config`; it documents every field, and a
   typo in a key name is an error naming the key.
+- **Orientation.** A profile's `[pad] orientation` (`dials-top`, `dials-right`, `dials-bottom`,
+  `dials-left`) sets how controls are numbered and drawn; the file itself keeps physical names
+  (`key.13`), so turning the pad remaps nothing. `monitor --profile` prints `KEY 01 [key.13] DOWN`
+  (displayed number, physical id in brackets). Clockwise stays clockwise. The firmware's lighting
+  animations run in the vendor's frame (dials on the right) whatever orientation you choose.
+  Directions get confirmed at the pad on the config-app tour (design: `docs/config-app.md` §6).
 - **Silencing.** While `run` or `monitor` runs, it maps the pad's codes to "no event" with
   `hidutil`, so the pad stays quiet for the system and only glra-osc hears it. Your own
   entries on the pad (for example a CapsLock remap) stay. On exit (Ctrl-C or SIGTERM) it

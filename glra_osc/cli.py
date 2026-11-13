@@ -14,6 +14,11 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command")
     mon = sub.add_parser("monitor", help="print the pad's decoded control events (read-only)")
     mon.add_argument("--raw", action="store_true", help="also print each raw report as hex")
+    mon.add_argument(
+        "--profile",
+        metavar="FILE",
+        help="number events as displayed in this profile's orientation (physical id in brackets)",
+    )
     typing_help = "run even if the pad can't be silenced (it then types into the focused app)"
     mon.add_argument("--allow-typing", action="store_true", help=typing_help)
     run_p = sub.add_parser("run", help="send the pad's controls as MIDI on a virtual port")
@@ -30,7 +35,13 @@ def main(argv=None):
     if args.command == "monitor":
         from .monitor import run
 
-        return run(raw=args.raw, allow_typing=args.allow_typing)
+        from .profile import ProfileError
+
+        try:
+            return run(raw=args.raw, allow_typing=args.allow_typing, profile=args.profile)
+        except ProfileError as err:
+            print(f"glra-osc: {err}", file=sys.stderr)
+            return 2
     if args.command == "run":
         from .mapping import MappingError
         from .runner import run
