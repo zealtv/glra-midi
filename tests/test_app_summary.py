@@ -14,6 +14,7 @@ from glra_midi.profile import (
     LayerDec,
     LayerInc,
     LayerSet,
+    NO_LAYER,
     Note,
     PerLayer,
     Profile,
@@ -168,6 +169,25 @@ class ImportTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("glra-midi[gui]", result.stderr)
 
+
+
+class RemovedLayerTests(unittest.TestCase):
+    def test_a_layer_set_whose_layer_was_removed_reads_as_removed(self):
+        self.assertEqual(summary.summarize(LayerSet(layer=NO_LAYER)), ("→ L?", "removed"))
+
+    def test_tile_and_inspector_cope_with_it_global_or_per_layer(self):
+        from glra_midi.app import inspector as insp
+
+        p = Profile(
+            layer_count=2,
+            layer_names=("", ""),
+            controls={"key.1": LayerSet(layer=NO_LAYER), "key.2": PerLayer.of({1: LayerSet(layer=NO_LAYER)})},
+        )
+        self.assertEqual(summary.tile_info(p, "key.1", 1)["line1"], "→ L?")
+        self.assertEqual(summary.tile_info(p, "key.2", 1)["line1"], "→ L?")
+        for control in ("key.1", "key.2"):
+            d = insp.describe(p, control, 1)
+            self.assertEqual((d["mode"], d["layerKey"]["layer"]), ("layer-key", NO_LAYER))
 
 if __name__ == "__main__":
     unittest.main()

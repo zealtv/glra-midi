@@ -22,6 +22,23 @@ ones that pointed at it.
 - `glra_midi/app/gui.py`: new capture state `problem-selected`; the `problems` state's
   comment updated (it now shows the "removed" Problem).
 
+## Follow-up after manager review (2026-11-13)
+
+The first commit only handled a top-level `LayerSet`. Now `remove_layer` applies the same rule
+(`_follow_removal`) to each kept event inside a per-layer control: above the removed layer drops
+by one, at it becomes `LayerSet(NO_LAYER)`. `validate` flags a per-layer one with its layer,
+"key.1.layers.2.layer: the layer it pointed at was removed; choose another layer" (the app
+shows "Key 1, layer 2 (layer): ..."). Tests: one in `tests/test_profile.py` (renumber and flag,
+removing a layer below and at the target) and two in `tests/test_app_summary.py` (tile text, and
+the inspector's `describe`, for the global and the per-layer case). `./test.sh`: ruff clean,
+597 tests OK.
+
+One fact for the record: a `layer-set` inside a per-layer control can't come from a file or the
+editors. `_parse_event` rejects it ("layer keys are global; move it to [key.1]"), `set_event`
+refuses it, and `validate` already reports it, with the layer, even before any removal. So this
+covers a profile built in code only. A flagged per-layer one therefore gets two Problems (the
+"removed" one and the "layer keys are global" one); I left both, as each says something true.
+
 ## Choices that could have gone another way
 
 - **How to flag.** `validate` works from the profile alone, and `Edit` has no warnings

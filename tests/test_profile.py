@@ -1112,6 +1112,30 @@ class EditLayerTests(unittest.TestCase):
         self.assertEqual(problems[0].control, "key.1")
         self.assertIn("key.1.layer: the layer it pointed at was removed", problems[0].message)
 
+    def test_remove_layer_applies_the_same_rule_to_layer_sets_inside_per_layer_controls(self):
+        # The parser and editors keep layer keys out of per-layer controls, but a profile built
+        # in code can hold one; removing a layer must not silently retarget it either.
+        p = Profile(
+            layer_count=4,
+            layer_names=("",) * 4,
+            controls={
+                "key.1": PerLayer.of({2: LayerSet(layer=3), 3: LayerSet(layer=2), 4: LayerSet(layer=1)}),
+            },
+        )
+        q = remove_layer(p, 2).profile  # layer 2's event goes; 3 -> 2, 4 -> 3
+        self.assertEqual(
+            q.controls["key.1"], PerLayer.of({2: LayerSet(layer=NO_LAYER), 3: LayerSet(layer=1)})
+        )
+        flagged = [x for x in validate(q) if "was removed" in x.message]
+        self.assertEqual(len(flagged), 1)
+        self.assertEqual(flagged[0].control, "key.1")
+        self.assertTrue(flagged[0].message.startswith("key.1.layers.2.layer: the layer it pointed at was removed"))
+        r = remove_layer(p, 1).profile  # a key above the removed layer moves down with it
+        self.assertEqual(
+            r.controls["key.1"],
+            PerLayer.of({1: LayerSet(layer=2), 2: LayerSet(layer=1), 3: LayerSet(layer=NO_LAYER)}),
+        )
+
     def test_remove_layer_still_flags_a_key_already_past_the_count(self):
         p = Profile(layer_count=3, layer_names=("",) * 3, controls={"key.1": LayerSet(layer=5)})
         q = remove_layer(p, 1).profile

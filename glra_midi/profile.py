@@ -675,6 +675,16 @@ def validate(profile):
                 )
             )
             continue
+        if isinstance(control, PerLayer):
+            for n, event in control.events:
+                if isinstance(event, LayerSet) and event.layer == NO_LAYER:
+                    problems.append(
+                        Problem(
+                            name,
+                            f"{name}.layers.{n}.layer: the layer it pointed at was removed; "
+                            "choose another layer",
+                        )
+                    )
         try:
             _parse_control(_control_data(control), name, profile.layer_count)
         except ProfileError as err:
@@ -1015,6 +1025,15 @@ def add_layer(profile, name=""):
     )
 
 
+def _follow_removal(action, removed):
+    """`action` after layer `removed` is taken out: a `LayerSet` follows its layer (see
+    `remove_layer`). The parser and editors keep layer keys out of per-layer controls, but a
+    profile built in code can hold one there, so `remove_layer` applies this to those too."""
+    if isinstance(action, LayerSet) and _is_int(action.layer) and action.layer >= removed:
+        return LayerSet(layer=NO_LAYER if action.layer == removed else action.layer - 1)
+    return action
+
+
 def remove_layer(profile, layer):
     """Remove `layer`: its events are discarded (reported), the layers above it move down one.
     Per-layer controls left with no events disappear. `layer-set` keys follow their layer: one
@@ -1028,8 +1047,7 @@ def remove_layer(profile, layer):
     _check_layer(profile, "layers", layer)
     controls, lost = {}, []
     for name, control in profile.controls.items():
-        if isinstance(control, LayerSet) and _is_int(control.layer) and control.layer >= layer:
-            control = LayerSet(layer=NO_LAYER if control.layer == layer else control.layer - 1)
+        control = _follow_removal(control, layer)
         if not isinstance(control, PerLayer):
             controls[name] = control
             continue
@@ -1038,7 +1056,7 @@ def remove_layer(profile, layer):
             if n == layer:
                 lost.append(Discarded(name, n, event))
             else:
-                kept[n - 1 if n > layer else n] = event
+                kept[n - 1 if n > layer else n] = _follow_removal(event, layer)
         if kept:
             controls[name] = PerLayer.of(kept)
     names = profile.layer_names[: layer - 1] + profile.layer_names[layer:]
