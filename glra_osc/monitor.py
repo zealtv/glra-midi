@@ -16,6 +16,7 @@ import time
 from .decode import Decoder
 from .device.backend import enumerate_devices, open_device
 from .events import format_event, format_time
+from .profile import load_profile
 from .silence import Guard, SilenceError, Silencer, TYPING_WARNING, check_interval, refusal_message
 
 INTERFACE_SOURCE = {0: "keys", 1: "consumer"}  # interface 2 is the silent vendor channel
@@ -35,12 +36,15 @@ def find_sources():
     return found
 
 
-def render(decoder, source, report, t, wall, raw=False):
-    """Lines to print for one report: an optional raw line, then one per event."""
+def render(decoder, source, report, t, wall, raw=False, orientation=None):
+    """Lines to print for one report: an optional raw line, then one per event.
+
+    `orientation` (a profile's `[pad] orientation`) labels events with displayed numbers.
+    """
     lines = []
     if raw:
         lines.append(f"{format_time(wall)} RAW {source} {bytes(report).hex()}")
-    lines += [format_event(e, wall) for e in decoder.feed(source, report, t)]
+    lines += [format_event(e, wall, orientation) for e in decoder.feed(source, report, t)]
     return lines
 
 
@@ -164,8 +168,10 @@ def _terminate(signum, frame):
     raise KeyboardInterrupt  # same exit path as Ctrl-C
 
 
-def run(raw=False, out=None, err=None, allow_typing=False, silencer=None):
+def run(raw=False, out=None, err=None, allow_typing=False, silencer=None, profile=None):
+    """`profile`: a profile file path; its orientation numbers the events (ProfileError propagates)."""
     out, err = out or sys.stdout, err or sys.stderr
+    orientation = load_profile(profile).orientation if profile else None
     decoder = Decoder()
 
     def say(text):
@@ -174,9 +180,11 @@ def run(raw=False, out=None, err=None, allow_typing=False, silencer=None):
     guard = Guard(silencer or Silencer(decoder.layout), say, allow_typing)
 
     def on_report(source, data, t, wall):
-        for line in render(decoder, source, data, t, wall, raw):
+        for line in render(decoder, source, data, t, wall, raw, orientation):
             say(line)
 
+    if orientation:
+        say(f"# {orientation}: numbers are as displayed, physical id in brackets")
     if decoder.layout["provisional"]:
         say("# layout is provisional: all dials decode as 'enc.?' (loom:unique-assignments)")
     if allow_typing:
