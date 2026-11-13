@@ -79,7 +79,11 @@ Button {
             Text {
                 width: parent.width
                 text: b.tile.line1
-                font.pixelSize: b.round ? 11 : (b.tile.line1.length > 11 ? 12 : 13)
+                font.pixelSize: b.round ? 11 : 13
+                // Shrink a long first line to fit (`CC20 10↔120` stays whole); only below the
+                // minimum does it elide.
+                fontSizeMode: Text.HorizontalFit
+                minimumPixelSize: 9
                 font.weight: Font.DemiBold
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
