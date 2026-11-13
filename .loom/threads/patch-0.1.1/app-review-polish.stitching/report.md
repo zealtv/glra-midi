@@ -1,42 +1,53 @@
-# app-review-polish: report (paused)
+# app-review-polish: report
 
-Worker: Claude Sonnet 5.5, 2026-11-13. Items go one per commit, cheapest first:
-13, 11, 10, 8, 9, 12, 5, then the pad view shrinking.
+Worker: Claude Sonnet 5.5, 2026-11-13 (paused once for usage, then resumed). Seven review
+findings and the pad-view shrinking, one commit each, cheapest first. `./test.sh` passed
+(621 tests) after merging main (`76135a3`).
 
-## Done so far
+## What I built
 
-- **13** `lighting.data_dir` calls `profile.app_dir` (commit `0afb051`). Test: both agree.
-- **11** The parser refuses `[key."01"]`, `layers."01"`, `"+1"` (a table name must be the plain
-  number) and `version = 1.0`. The shipped default profile, `demo_profile.toml` and every file in
-  `tests/fixtures/` still load (checked by loading them, not only by the suite). CHANGELOG
-  "Changed" says what now fails.
-- **10** An invalid port draft counts as unsaved (title bullet, quit/Open ask) and blocks Save and
-  Save As with "Fix the MIDI port before saving: …". I chose blocking over "Save writes the old
-  port" because the latter leaves the app dirty after a successful Save.
-- **9** `Controller.poll` returns early while `_confirmed` or `_after` is pending. Stamps stay
-  stale, so the change is noticed on the first poll after the answer.
+| Item | Commit | Change |
+| --- | --- | --- |
+| 13 | `0afb051` | `lighting.data_dir` calls `profile.app_dir`; a test says they agree. |
+| 11 | `d16f783` | A table name must be the plain number: `[key."01"]`, `layers."01"`, `"+1"` now fail ("unknown control" / "layer doesn't exist"), as does `version = 1.0`. CHANGELOG "Changed" says so. |
+| 10 | `8ca0b86` | An invalid port draft counts as unsaved (title `•`, quit and Open ask) and blocks Save and Save As with "Fix the MIDI port before saving: …". |
+| 9 | `f9eac61` | `Controller.poll` does nothing while a confirm or unsaved prompt is pending; the stale stamps mean the change is noticed on the first poll after the answer. |
+| 8 | `141e255` | Each problem row carries a `layer`; new slot `selectProblem(index)` sets tab and control; the [Select] button calls it. A problem whose path names no layer leaves the tab alone. |
+| 12 | `ef8c5e1` | The channel and layer picker choices, the lighting hint, the "Pad now" line and the "Layers … hold an event" note come from Python (`inspector.describe`, `describe_lighting`, `_device_model`). Side effect: "holds" for a single layer (it said "Layer 2 hold"). |
+| 5 | `58c13a3` | Tile line 1 uses `fontSizeMode: HorizontalFit` (minimum 9 px), so `CC20 10↔120` shows whole. |
+| pad view | `a26e6d1` | See below. |
 
-## Left to do
+**Pad view.** The pad is drawn with a `scale` that shrinks when its area is short. With the device
+panel open at 1000 × 740 the scale was 0.66 (measured with a probe: area 303 px, pad needs 432).
+Now: default window 820 px high (was 740), panel margins and spacing tightened, "Pad now" shares
+the line with the lighting heading, pad row spacing 14 → 10. Scale is now 0.93 in all four
+orientations (the sideways ones were already fine). A test (`DevicePanelTests`) fails below 0.9.
+`docs/config-app.md` 4.3 now says 1000 × 820. macOS clamps a window to the screen, so on a short
+display the pad shrinks a little again; I did not test a real small screen.
 
-Paused at the manager's request (usage near the limit) after commit `f9eac61`; `./test.sh` passed
-there (615 tests) and the tree was clean. No code for 8 or later is written yet. `.worker-done` is
-not touched, and main is not yet merged into the branch.
+## How I checked
 
-- **8** Problems [Select] should switch the layer. Plan from what I read: `Main.qml:~189` calls
-  `controller.selectControl(modelData.control)`. Add a `layer` field to each dict in the
-  `problems` list in `Controller._refresh` (parse `_LAYER_IN_PATH` against the problem's message
-  path; 0 when none, and only when 1..layer_count), plus a `selectProblem(index)` slot that sets
-  `_tab` and `_selected` together; point the QML button at it. Test in `test_app_controller.py`
-  (a problem at `key.N.layers.3…` moves the tab to 3). A problem with no layer in its path (for
-  example "key 13 goes to layer 6") leaves the tab alone.
-- **9** done; **10**, **11**, **13** done (above).
-- **12** Move the QML-composed strings (`"default (" + n + ")"`, `"Layer " + n` in
-  `Inspector.qml:~30,35`; sentences in `DevicePanel.qml:~205,215`) into `inspector.describe` and
-  `_device_model`.
-- **5** Tile summaries truncate (`KeyTile.qml:~81-85` elides line 1; `CC20 10↔120` shows as
-  "CC20 10↔1…"). Shrink the font further or drop the space; check with
-  `tools/app-capture.sh` on the cc-momentary state, light and dark.
-- **Pad view shrinking** with the device panel open at the default window size: reproduce with
-  `tools/app-capture.sh device-panel out.png`, then look at the PadView sizing in `Main.qml`.
-- Then: merge main, rerun `./test.sh`, finish this report (what was built, how checked, open
-  questions; none so far), commit, `touch .worker-done`.
+- `./test.sh` before every commit; each fix has a test that failed first or exercises the new path
+  (controller tests for 8, 9, 10; profile tests for 11; model tests for 12; a QML test for the pad).
+- Item 11: loaded the shipped default, `demo_profile.toml` and every `tests/fixtures/*.toml`
+  directly; all still load.
+- Captures in `captures/` (offscreen, `--demo`, fake pad), looked at: `after-12-*.png` (text
+  unchanged after the move to Python), `after-5-cc-momentary.png`, `after-pad-device-panel.png`
+  and `-dark.png`. I read the light ones; I did not read the dark device-panel capture closely.
+- Nothing wrote to the pad; no run against a real pad.
+
+## What I didn't do
+
+- Tile line 2 (`↑250 ↓600 ms ease-out`) still elides on a narrow tile. Fitting it needed 8 px
+  text, which read worse than the cut-off, so I left it (the tooltip has the full text). CHANGELOG
+  says so.
+- Strings still composed in QML after 12: the tile accessible names and tooltip, "Layer " in the
+  tab accessible name, and "Rename layer " in the rename dialog heading. The review named only the
+  Inspector and DevicePanel ones.
+- Item 10 blocks Save rather than saving the old port; item 9 only guards the poll (not Revert
+  or Open reading the disk while a prompt is open).
+
+## Open questions
+
+None for Bob. Two small calls I made that he may want to see: the 820 px default height, and
+blocking Save on an invalid port draft.
