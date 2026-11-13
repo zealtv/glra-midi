@@ -9,6 +9,8 @@ module writes unless `apply` is called, and `apply` is called only on an explici
 
 Payload, 11 bytes: `[1, 0, mode, brightness, speed, direction, colour flag, byte 7, h, s, v]`.
 `apply` changes only bytes 2, 3, 4, 6 and 8-10 and keeps the rest (direction, byte 7) as read.
+Firmware 103 rewrites byte 7 and the HSV bytes when it stores a payload; `readback_differences`
+says which differences between sent and read back still count.
 """
 
 import threading
@@ -197,6 +199,34 @@ def changes(current, new):
     return found
 
 
+def readback_differences(expected, after):
+    """`[(field, expected, got)]` for what really differs between a payload sent and one read back.
+
+    Firmware 103 normalises two things when it stores a payload (the 2026-11-13 captures in
+    `tests/test_lighting.py`, `glean:k16n3-lighting`): with the colour flag off it resets the
+    hue/saturation/value to `ff ff ff`, and with the flag on it rewrites byte 7. Neither shows on
+    the pad, so neither counts. Compared: mode, brightness and speed (where the mode reads them),
+    direction, the colour flag, and HSV only when the sent flag is on. Anything else that differs
+    is still reported, by the same field names as `changes`.
+    """
+    sent, got = parse(expected), parse(after)
+    mode = MODE_BY_NUMBER[sent.mode]
+    fields = ["mode"]
+    if mode.brightness:
+        fields.append("brightness")
+    if mode.speed:
+        fields.append("speed")
+    fields += ["direction", "color_flag"]
+    if sent.color_flag == 1:
+        fields.append("hsv")
+    found = []
+    for field in fields:
+        a, b = getattr(sent, field), getattr(got, field)
+        if a != b:
+            found.append((field, a, b))
+    return found
+
+
 # --- reading and the guarded write ---------------------------------------------------------
 
 
@@ -244,6 +274,36 @@ def _firmware_103_gate():
             _studio.MODES.update(saved)
 
 
+@contextmanager
+def _tolerant_readback(watched, expected):
+    """For one write: the vendored readback check stops treating firmware 103's normalising as a
+    mismatch, and every other check in `write` (acknowledgement, assignments, RGB data) still runs.
+
+    `device.lighting.write` compares the pad's bytes after the write with the bytes sent, exactly.
+    While `watched` says the write went out, a read that differs from `expected` only in what
+    `readback_differences` ignores is passed to that check as `expected`; any other read goes
+    through as it came. The bytes the pad really held are kept in `raw` (the last read).
+    Call inside `_firmware_103_gate`; the gate's lock covers the patch.
+    """
+    original = _studio.read
+    raw = []
+
+    def read(reader):
+        value = original(reader)
+        if not watched.sent:
+            return value
+        raw.append(value)
+        if value != expected and not readback_differences(expected, value):
+            return bytes(expected)
+        return value
+
+    _studio.read = read
+    try:
+        yield raw
+    finally:
+        _studio.read = original
+
+
 class WriteNotConfirmed(RuntimeError):
     """The `06 0b` went out, but the vendored write could not confirm it.
 
@@ -276,9 +336,10 @@ class _SentFlag:
     `apply` can tell "refused before anything was sent" from "sent, then not confirmed".
     """
 
-    def __init__(self, reader):
+    def __init__(self, reader, expected=None):
         self._reader = reader
         self.sent = False
+        self.expected = expected  # the payload being sent, for `_SentDevice.read`
 
     @property
     def device(self):
@@ -297,6 +358,22 @@ class _SentDevice:
         self._flag.sent = True
         return result
 
+    def read(self, size, timeout):
+        """The acknowledgement; if it echoes the payload with only what firmware 103 rewrites
+        changed (`readback_differences`), the vendored check sees the payload it sent.
+        Not seen on the pad yet (the 2026-11-13 captures fail earlier, at the readback)."""
+        ack = bytes(self._device.read(size, timeout))
+        expected = self._flag.expected
+        if self._flag.sent and expected is not None and len(ack) == 64 and ack[:3] == b"\xaa\x0b\x01":
+            echoed = ack[5 : 5 + PAYLOAD_SIZE]
+            try:
+                same = echoed != expected and not readback_differences(expected, echoed)
+            except LightingError:
+                same = False
+            if same:
+                return ack[:5] + bytes(expected) + ack[5 + PAYLOAD_SIZE :]
+        return ack
+
     def __getattr__(self, name):
         return getattr(self._device, name)
 
@@ -309,6 +386,32 @@ def _split_vendored_error(text):
     """`(reason, backup path)` from the vendored `RuntimeError` text."""
     reason, _, backup = text.partition("\n" + _BACKUP_LINE)
     return reason.replace(_PAUSED, "").strip(), backup.strip()
+
+
+def _record_normalised(result, sent, held):
+    """The pad kept a payload that differs from the one sent only in what firmware 103 rewrites.
+
+    `result["after"]` becomes what the pad really holds (the vendored result file, saved while the
+    check saw the sent bytes, says `after` = sent), `result["normalised"]` names the ignored
+    bytes, and one more record file keeps both, next to the backup.
+    """
+    result["after"] = held.hex()
+    ignored = [
+        (i, sent[i], held[i]) for i in range(PAYLOAD_SIZE) if sent[i] != held[i]
+    ]
+    result["normalised"] = [
+        {"byte": i, "sent": f"{a:02x}", "held": f"{b:02x}"} for i, a, b in ignored
+    ]
+    if result.get("backup"):
+        from .device import storage
+
+        path = Path(result["backup"])
+        record = path.with_name(path.name.replace("-lighting-before", "-lighting-normalised"))
+        with suppress(OSError):
+            storage.save(
+                record,
+                {"sent": sent.hex(), "held": held.hex(), "normalised": result["normalised"]},
+            )
 
 
 def apply(reader, identity, lighting, directory):
@@ -325,10 +428,13 @@ def apply(reader, identity, lighting, directory):
     new = build(before, lighting)
     if new == before:
         return {"before": before.hex(), "after": before.hex(), "unchanged": True}
-    watched = _SentFlag(reader)
-    with _firmware_103_gate():
+    watched = _SentFlag(reader, new)
+    with _firmware_103_gate(), _tolerant_readback(watched, new) as raw:
         try:
-            return _studio.write(watched, identity, new, before.hex(), directory)
+            result = _studio.write(watched, identity, new, before.hex(), directory)
+            if raw and raw[-1] != new:
+                _record_normalised(result, new, raw[-1])
+            return result
         except RuntimeError as exc:
             if not watched.sent:
                 raise

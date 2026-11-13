@@ -3,6 +3,7 @@
 """Lighting modes: payloads, the guarded write and `glra-midi lights`, all on a fake pad."""
 
 import io
+import json
 import tempfile
 import unittest
 from contextlib import contextmanager
@@ -20,6 +21,13 @@ from glra_midi.profile import Lighting
 # What `glean:k16n3-lighting` records on Bob's pad: stock mode 4, direction 3, byte 7 = 8.
 STOCK = bytes.fromhex("0100040403030008ffffff")
 ALLOWED = {2, 3, 4, 6, 8, 9, 10}  # the bytes `apply` may change (design section 5.3)
+# The two readback mismatches from Bob's tour (2026-11-13): firmware 103 normalised bytes.
+CAPTURES = json.loads(
+    (Path(__file__).parent / "fixtures" / "lighting_readback_captures.json").read_text()
+)["captures"]
+FLOW = Lighting(mode=5, brightness=4, speed=4)
+BREATHING_COLOUR = Lighting(mode=2, brightness=4, speed=4, color=(215, 255, 255))
+CAPTURE_WANTED = {"flow-columns-colour-off": FLOW, "breathing-colour-on-h215": BREATHING_COLOUR}
 
 
 class Audit:
@@ -41,6 +49,7 @@ class FakePad:
         self.packets = []  # every packet written, as sent
         self.queries = []  # every read opcode asked
         self.stored = None  # what a write leaves in the pad, if not the payload sent
+        self.ack_echoes_stored = False  # the ack carries what the pad kept, not what was sent
         self.ack = b""
 
     def status(self):
@@ -70,7 +79,8 @@ class FakePad:
         self.packets.append(bytes(data))
         sent = bytes(data[6:17])
         self.payload = bytearray(self.stored if self.stored is not None else sent)
-        self.ack = bytes([0xAA, 0x0B, 1, 0, 0]) + sent + bytes(48)
+        echoed = bytes(self.payload) if self.ack_echoes_stored else sent
+        self.ack = bytes([0xAA, 0x0B, 1, 0, 0]) + echoed + bytes(48)
         return len(data)
 
     def read(self, size, timeout):
@@ -183,6 +193,64 @@ class PayloadTests(unittest.TestCase):
                 self.assertNotIn("import lighting", source)
 
 
+class ReadbackTests(unittest.TestCase):
+    """Firmware 103 normalises bytes; `readback_differences` ignores exactly those."""
+
+    def test_the_captures_are_what_build_makes_and_differ_as_recorded(self):
+        for c in CAPTURES:
+            with self.subTest(capture=c["name"]):
+                before = bytes.fromhex(c["before"])
+                expected = bytes.fromhex(c["expected"])
+                self.assertEqual(build(before, CAPTURE_WANTED[c["name"]]), expected)
+                self.assertNotEqual(expected, bytes.fromhex(c["after"]))  # the old check failed
+
+    def test_both_captures_count_as_read_back(self):
+        for c in CAPTURES:
+            with self.subTest(capture=c["name"]):
+                found = lighting.readback_differences(
+                    bytes.fromhex(c["expected"]), bytes.fromhex(c["after"])
+                )
+                self.assertEqual(found, [])
+
+    def test_identical_payloads_have_no_differences(self):
+        self.assertEqual(lighting.readback_differences(STOCK, STOCK), [])
+
+    def test_byte7_never_counts_and_hsv_counts_only_with_the_flag_on(self):
+        off = bytes.fromhex("0100020404030008aaffff")
+        self.assertEqual(lighting.readback_differences(off, bytes.fromhex("01000204040300ff112233")), [])
+        on = bytes.fromhex("0100020404030108d7ffff")
+        self.assertEqual(
+            lighting.readback_differences(on, bytes.fromhex("01000204040301ffd8ffff")),
+            [("hsv", (215, 255, 255), (216, 255, 255))],
+        )
+
+    def test_every_other_difference_is_still_reported(self):
+        sent = bytes.fromhex("0100020403030108d7ffff")
+        cases = {
+            "mode": ("0100030403030108d7ffff", [("mode", 2, 3)]),
+            "brightness": ("0100020303030108d7ffff", [("brightness", 4, 3)]),
+            "speed": ("0100020402030108d7ffff", [("speed", 3, 2)]),
+            "direction": ("0100020403020108d7ffff", [("direction", 3, 2)]),
+            "colour flag": ("0100020403030008d7ffff", [("color_flag", 1, 0)]),
+        }
+        for what, (after, expected) in cases.items():
+            with self.subTest(what=what):
+                self.assertEqual(lighting.readback_differences(sent, bytes.fromhex(after)), expected)
+
+    def test_brightness_and_speed_count_only_where_the_mode_reads_them(self):
+        # Steady (1) reads brightness, not speed; Custom (12) reads brightness, not speed.
+        sent = bytes.fromhex("0100010402030008ffffff")
+        self.assertEqual(lighting.readback_differences(sent, bytes.fromhex("0100010400030008ffffff")), [])
+        self.assertEqual(
+            lighting.readback_differences(sent, bytes.fromhex("0100010102030008ffffff")),
+            [("brightness", 4, 1)],
+        )
+
+    def test_a_bad_readback_payload_is_refused_not_ignored(self):
+        with self.assertRaises(LightingError):
+            lighting.readback_differences(STOCK, STOCK[:10])
+
+
 class ReadTests(unittest.TestCase):
     def test_read_payload_uses_only_the_lighting_read(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -242,6 +310,67 @@ class ApplyTests(unittest.TestCase):
             self.assertEqual(pad.packets, [])
             self.assertEqual(list(Path(folder).rglob("*.json")), [])  # not even a backup
             self.assertEqual(pad.queries, [10])  # one lighting read, nothing else
+
+    def test_firmware_103_normalising_reads_back_as_applied(self):
+        for c in CAPTURES:
+            with self.subTest(capture=c["name"]), tempfile.TemporaryDirectory() as folder:
+                pad = FakePad(folder, payload=bytes.fromhex(c["before"]))
+                pad.directory = Path(folder) / "backups"
+                pad.stored = bytes.fromhex(c["after"])
+                result = self.apply(pad, CAPTURE_WANTED[c["name"]], folder)
+                self.assertTrue(result["verified"])
+                self.assertEqual(len(pad.packets), 1)
+                self.assertEqual(pad.packets[0][6:17].hex(), c["expected"])
+                # what the pad holds is reported, not what was sent
+                self.assertEqual(result["after"], c["after"])
+                self.assertEqual(bytes(pad.payload).hex(), c["after"])
+                changed = {n["byte"] for n in result["normalised"]}
+                self.assertTrue(changed and changed <= {7, 8})
+                record = Path(result["backup"].replace("-lighting-before", "-lighting-normalised"))
+                self.assertEqual(load(record)["held"], c["after"])
+                self.assertEqual(load(record)["sent"], c["expected"])
+
+    def test_a_pad_that_keeps_what_was_sent_has_nothing_normalised(self):
+        with tempfile.TemporaryDirectory() as folder:
+            pad = FakePad(folder)
+            pad.directory = Path(folder) / "backups"
+            result = self.apply(pad, Lighting(mode=3, brightness=2, speed=2), folder)
+            self.assertNotIn("normalised", result)
+            self.assertEqual(result["after"], bytes(pad.payload).hex())
+
+    def test_an_ack_that_echoes_the_normalised_bytes_still_confirms(self):
+        c = CAPTURES[1]
+        with tempfile.TemporaryDirectory() as folder:
+            pad = FakePad(folder, payload=bytes.fromhex(c["before"]))
+            pad.directory = Path(folder) / "backups"
+            pad.stored, pad.ack_echoes_stored = bytes.fromhex(c["after"]), True
+            result = self.apply(pad, BREATHING_COLOUR, folder)
+            self.assertTrue(result["verified"])
+            self.assertEqual(result["after"], c["after"])
+
+    def test_a_real_difference_next_to_a_normalised_one_still_fails(self):
+        c = CAPTURES[1]  # normalised byte 7, plus the pad kept speed 2 instead of 4
+        with tempfile.TemporaryDirectory() as folder:
+            pad = FakePad(folder, payload=bytes.fromhex(c["before"]))
+            pad.directory = Path(folder) / "backups"
+            pad.stored = bytes.fromhex("01000204020301ffd7ffff")
+            with self.assertRaises(lighting.WriteNotConfirmed) as ctx:
+                self.apply(pad, BREATHING_COLOUR, folder)
+            self.assertEqual(ctx.exception.after, "01000204020301ffd7ffff")
+            self.assertEqual(len(pad.packets), 1)
+
+    def test_the_vendored_read_is_restored_after_every_write(self):
+        original = studio.read
+        with tempfile.TemporaryDirectory() as folder:
+            pad = FakePad(folder, payload=bytes.fromhex(CAPTURES[0]["before"]))
+            pad.directory = Path(folder) / "backups"
+            pad.stored = bytes.fromhex(CAPTURES[0]["after"])
+            self.apply(pad, FLOW, folder)
+            self.assertIs(studio.read, original)
+            pad.stored = bytes.fromhex("0100010101010008ffffff")
+            with self.assertRaises(lighting.WriteNotConfirmed):
+                self.apply(pad, Lighting(mode=3, brightness=2, speed=2), folder)
+            self.assertIs(studio.read, original)
 
     def test_readback_mismatch_is_reported_and_leaves_an_error_record(self):
         with tempfile.TemporaryDirectory() as folder:

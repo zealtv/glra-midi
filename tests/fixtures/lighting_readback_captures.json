@@ -1,0 +1,21 @@
+{
+  "source": "Bob's pad (36ae:2475, firmware 103), config-app tour 3.3, 2026-11-13; screenshots in .loom/threads/patch-0.1.1/evidence/. Payload: 01 00 mode bright speed dir flag byte7 h s v.",
+  "captures": [
+    {
+      "name": "flow-columns-colour-off",
+      "screenshot": "readback-flow-columns.png",
+      "before": "0100020404030008aaffff",
+      "expected": "0100050404030008aaffff",
+      "after": "0100050404030008ffffff",
+      "note": "colour flag off: the pad reset hue aa -> ff"
+    },
+    {
+      "name": "breathing-colour-on-h215",
+      "screenshot": "readback-breathing-colour.png",
+      "before": "0100020404030008aaffff",
+      "expected": "0100020404030108d7ffff",
+      "after": "01000204040301ffd7ffff",
+      "note": "colour flag on: the pad set byte 7 08 -> ff"
+    }
+  ]
+}

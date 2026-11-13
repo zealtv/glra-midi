@@ -46,6 +46,18 @@ Probed on Bob's pad (36ae:2475, firmware 103) on 2026-11-13 with Bob watching:
   direction, colour flag, 0, h, s, v]`; colour flag 1 + HSV = one fixed hue in
   modes 1, 2, 4–7, 11. All verified by eye except direction. Each change is a
   persisted write: set rarely, never modulate live.
+- **Firmware 103 normalises a stored payload** (two captures from Bob's config-app
+  tour, 2026-11-13, `.loom/threads/patch-0.1.1/evidence/`, fixtures in
+  `tests/fixtures/lighting_readback_captures.json`): with the colour flag **off** it
+  resets h/s/v to `ff ff ff` (sent `…00 08 aa ff ff`, read `…00 08 ff ff ff`); with
+  the flag **on** it sets **byte 7 from `08` to `ff`** (sent `…01 08 d7 ff ff`, read
+  `…01 ff d7 ff ff`), HSV kept. So byte 7 is not a constant: the stock `08` holds
+  only while the flag is off. Neither change shows on the pad. `glra_midi/lighting.py`
+  `readback_differences` therefore compares mode, brightness/speed (where the mode
+  reads them), direction, the flag, and HSV only with the flag on. Not captured: what
+  byte 7 means, whether the ack echoes sent or stored bytes, whether direction is
+  ever rewritten. Check at the pad: the same sequence (Flow columns, Breathing with
+  colour, Custom, Lit on press) ends "Applied and read back."
 - The flows suggest the vendor's frame has the dials on the **right**
   (`loom:orientation`, under `config-app` since 2026-11-13).
 - **No RAM path found** (desk, `loom:led-ram-path`, 2026-11-13): the vendor

@@ -18,6 +18,11 @@ release.
   each keeps reaching the same layer, and flags a key that pointed at the removed layer in the
   Problems list (it shows as `→ L?` until you pick another layer). Before, such keys kept their
   number and silently went to a different layer.
+- Applying a lighting mode no longer reports "Written to the pad, but it did not
+  read back as expected" when the pad only normalised bytes it ignores (firmware
+  103 resets the colour to `ff ff ff` with One colour off, and rewrites an unused
+  byte with it on). Any other difference still shows. The app's "Pad now" line
+  shows what the pad holds.
 
 ## [0.1.0] - 2026-11-13
 
