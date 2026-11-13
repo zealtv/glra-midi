@@ -4,7 +4,32 @@ Host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI
 controller (OSC later). It builds on [glra-studio](https://github.com/imolitor/glra-studio)
 for device I/O.
 
-**Status:** pre-alpha, but working. As of 2026-11-13 `glra-osc run` plays a profile (layers, per-layer channels, notes, CCs with glides) on a virtual MIDI port and silences the pad so it doesn't type into apps, and `glra-osc config` is an app that edits those profiles and picks the pad's factory RGB mode and orientation. The configuration app and the layered engine haven't been tried at the pad yet (that's the config-app tour). OSC output doesn't exist yet. Planned work lives on the loom (`.loom/`).
+**Status:** pre-alpha, but working. As of 2026-11-13 `glra-osc run` plays a profile (layers, per-layer channels, notes, CCs with glides) on a virtual MIDI port and silences the pad so it doesn't type into apps, and `glra-osc config` is an app that edits those profiles and picks the pad's factory RGB mode and orientation. Bob tried the app on 2026-11-13 and judged it "working well enough for a first release". macOS only. OSC output doesn't exist yet. Planned work lives on the loom (`.loom/`).
+
+## Install and run
+
+Needs macOS and Python 3.13 or later (Homebrew's `python3.14` works).
+
+```sh
+git clone https://github.com/zealtv/glra-osc.git
+cd glra-osc
+python3 -m venv .venv
+.venv/bin/pip install -e '.[gui]'     # gui adds PySide6 for the configuration app
+```
+
+Then, with the pad plugged in:
+
+1. **Configure:** `.venv/bin/glra-osc config` opens the configuration app on your current
+   profile (the first start creates one from the shipped default: three layers, keys as
+   notes 36-51, the dial pushes pick the layer). Try `--demo` first if you'd like a fake pad
+   and a throwaway profile.
+2. **Play:** `.venv/bin/glra-osc run` sends MIDI on a virtual port named **GLRA K16**. Pick
+   that port as a MIDI input in your DAW or synth. The pad stops typing while `run` runs.
+   Edits you save in the app reach a running `run` within half a second.
+3. **Stop** `run` with Ctrl-C. If the pad still types nothing afterwards (say after a
+   `kill -9`), run `.venv/bin/glra-osc unsilence` or replug it.
+
+To skip the `.venv/bin/` prefix, `source .venv/bin/activate` first.
 
 ## Usage
 
@@ -35,7 +60,7 @@ glra-osc unsilence            # remove glra-osc's key-mapping entries from the p
   `glra_osc/default_profile.toml`, which documents every field. Old mapping files no longer
   load (Bob, 2026-11-13: "we can hard break"); `--config` takes profiles only. The format and
   the engine's rules are in `docs/config-app.md` (sections 2 and 3).
-- **Layers.** A profile has 1 to 8 layers (default 4). A control can hold one event for every
+- **Layers.** A profile has 1 to 8 layers (the shipped default has 3). A control can hold one event for every
   layer, an event (or nothing) on each layer separately, or a layer key (`layer-set`,
   `layer-inc`, `layer-dec`). `run` starts on layer 1; a layer change sends no MIDI, and
   `--dry-run` prints it (`# layer 1 -> 2 'Synth'`). A key released after a layer change still
@@ -82,10 +107,7 @@ Needs Python 3.13+ on macOS (Homebrew's `python3.14` works).
 .venv/bin/glra-osc --version
 ```
 
-The configuration app (work in progress: it shows a profile's layers and tiles and opens,
-saves and reloads profiles; editing fields come later) starts with `glra-osc config`
-or `glra-osc-config`; `glra-osc config --demo` runs it on a throwaway fixture profile.
-`tools/app-capture.sh <state> <out.png>` renders a named state offscreen.
+`tools/app-capture.sh <state> <out.png>` renders a named state of the app offscreen.
 
 ## Licence
 
