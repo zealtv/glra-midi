@@ -309,6 +309,17 @@ class DevicePanelTests(QmlCase):
         self.assertFalse(self.window.property("visible"))
         self.assertEqual(len(self.pad.writes), 1)
 
+    def test_the_pad_keeps_its_size_with_the_panel_open_at_the_default_window_size(self):
+        # The pad view shrinks (a scale, text and all) when its area gets short. With the device
+        # panel open at the default window size it was about 0.7 and the tile text hard to read.
+        for orientation in prof.ORIENTATIONS:
+            with self.subTest(orientation=orientation):
+                self.open_panel()
+                self.controller.setOrientation(orientation)
+                self.settle()
+                scale = self.find("padLayout").property("scale")
+                self.assertGreaterEqual(scale, 0.9, scale)
+
     def test_loads_collapsed_then_a_click_on_the_strip_opens_it(self):
         self.load(pad=pads.FakePad())
         self.assertFalse(self.find("devicePanel").property("visible"))

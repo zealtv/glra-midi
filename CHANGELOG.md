@@ -26,6 +26,12 @@ release.
 - Config app: the first line of a key tile now shrinks to fit instead of ending in "…", so
   `CC20 10↔120` shows whole. (The second line, such as `↑250 ↓600 ms ease-out`, still cuts off
   on a narrow tile; the tooltip has it in full.)
+- Config app: with the device panel open the pad view no longer shrinks to about two thirds of
+  its size at the default window size. The window starts 820 px high (was 740) and the panel is a
+  little more compact ("Pad now" shares the lighting heading's line).
+- Config app: the Inspector's "Layers 1 and 3 hold an event…" note now says "holds" for a
+  single layer. The words behind the Channel and Layer pickers, the lighting hint and the "Pad now"
+  line moved from QML into the Python model, with no change to what they show.
 - Config app: [Select] on a Problems row now also switches to the layer the problem names
   (for a problem at `key.4.layers.3`, layer 3), so the inspector shows the control the message
   talks about. A problem that names no layer leaves the tab alone.

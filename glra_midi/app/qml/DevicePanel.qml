@@ -15,7 +15,7 @@ Rectangle {
     readonly property var dev: ctl.device
     readonly property var light: dev.lighting
     readonly property var applyState: dev.apply
-    implicitHeight: content.implicitHeight + 28
+    implicitHeight: content.implicitHeight + 20
     color: pal.panel
     radius: 14
     border.color: pal.line
@@ -38,7 +38,7 @@ Rectangle {
     RowLayout {
         id: content
         anchors.fill: parent
-        anchors.margins: 14
+        anchors.margins: 10
         spacing: 24
 
         // Orientation, MIDI.
@@ -47,7 +47,7 @@ Rectangle {
             Layout.preferredWidth: 330
             Layout.maximumWidth: 330
             Layout.alignment: Qt.AlignTop
-            spacing: 8
+            spacing: 6
             Text {
                 text: "PAD AND MIDI"
                 font.pixelSize: 10
@@ -91,13 +91,28 @@ Rectangle {
         ColumnLayout {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignTop
-            spacing: 8
-            Text {
-                text: "PAD LIGHTING (FACTORY MODES)"
-                font.pixelSize: 10
-                font.weight: Font.DemiBold
-                font.letterSpacing: 0.8
-                color: panel.pal.muted
+            spacing: 6
+            // The heading and what the pad holds now share a line (the panel's height decides
+            // how much room the pad view keeps).
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Text {
+                    text: "PAD LIGHTING (FACTORY MODES)"
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.8
+                    color: panel.pal.muted
+                }
+                Text {
+                    objectName: "padNow"
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignRight
+                    elide: Text.ElideRight
+                    text: panel.dev.pad.text
+                    font.pixelSize: 12
+                    color: panel.pal.ink
+                }
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -205,14 +220,6 @@ Rectangle {
                 text: panel.light.hint
                 font.pixelSize: 12
                 color: panel.pal.muted
-            }
-            Text {
-                objectName: "padNow"
-                Layout.fillWidth: true
-                elide: Text.ElideRight
-                text: panel.dev.pad.text
-                font.pixelSize: 12
-                color: panel.pal.ink
             }
             RowLayout {
                 Layout.fillWidth: true

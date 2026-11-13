@@ -485,8 +485,8 @@ glra_midi/app/
 
 ### 4.3 Window
 
-One window, about 1000 × 740 (640 until `app-device-panel` added the open panel; Claude,
-2026-11-13), resizable. Toolbar on top, layer tabs above the
+One window, about 1000 × 820 (640 until `app-device-panel` added the open panel, 740 until
+`app-review-polish` stopped the pad view shrinking beside the open panel; Claude, 2026-11-13), resizable. Toolbar on top, layer tabs above the
 pad, inspector on the right, device panel as a collapsible strip at the
 bottom.
 

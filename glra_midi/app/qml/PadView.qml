@@ -22,12 +22,13 @@ Item {
 
     GridLayout {
         id: layout
+        objectName: "padLayout"
         anchors.centerIn: parent
         // Shrink, never grow, when the window is small.
         scale: Math.min(1, (pad.height - 16) / implicitHeight, (pad.width - 16) / implicitWidth)
         columns: pad.sideways ? 2 : 1
         columnSpacing: 18
-        rowSpacing: 14
+        rowSpacing: 10
 
         Grid {
             id: dialBlock
