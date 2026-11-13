@@ -74,3 +74,7 @@ None new. These are readings of his Q7 answer that I took; he may want them chan
 - Open… sets the pointer, so `run` follows the app.
 - The app opens only files in `profiles/`.
 Renaming and deleting profiles in the app go on the tour's "later" list.
+
+Orchestrator, 2026-11-13 15:16 AEDT: landing waits for the rest; the branch
+stays in `../glra-osc-design-answers`, claimed. Resume plan in
+`.groundhog/schedule/once/2026-11-13/16-15/resume-config-app-orchestrator/prompt.md`.
