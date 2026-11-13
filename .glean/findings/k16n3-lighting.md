@@ -29,6 +29,15 @@ Probed on Bob's pad (36ae:2475, firmware 103) on 2026-11-13 with Bob watching:
 - The 432-byte `06 13` read: bytes 0–83 = 28 RGB triples (16 used), bytes 84+
   mirror the keymap. **Never write past byte 83** or use bulk `06 12` without a
   fresh look; it could rewrite assignments.
+- **Firmware modes** (probed 2026-11-13, `loom:led-modes`): 1 Steady (gradient,
+  or one hue), 2 Breathing, 3 Spectrum, 4/5 flows (whole rows/columns), 6
+  Raindrop, 7 Meteor, 8 Starry sky, 9/10 Ripples and 11 Lit-on-press (react to
+  physical presses only). Payload `[1, 0, mode, brightness 0–4, speed 0–4,
+  direction, colour flag, 0, h, s, v]`; colour flag 1 + HSV = one fixed hue in
+  modes 1, 2, 4–7, 11. All verified by eye except direction. Each change is a
+  persisted write: set rarely, never modulate live.
+- The flows suggest the vendor's frame has the dials on the **right**
+  (`loom:orientation`).
 - Not tested: max write rate, input interference, bulk `06 12`, flash endurance.
 - Bob's stock table holds a red X (keys 1, 4, 6, 7, 10, 11, 13, 16); restore
   target `0100040403030008ffffff` + that X.
