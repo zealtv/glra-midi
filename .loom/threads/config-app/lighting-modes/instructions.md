@@ -11,14 +11,19 @@ Bob: "we also want to select the rgb mode from the factory firmware."
 - `glra_osc/lighting.py` on top: the firmware-103 mode table from
   `glean:k16n3-lighting` (0 Off, 1 Steady, 2 Breathing, 3 Spectrum, 4/5 flows,
   6 Raindrop, 7 Meteor, 8 Starry sky, 9/10 Ripples, 11 Lit-on-press, 12
-  Custom), with brightness 0–4, speed 0–4, and the fixed-hue flag + HSV where
-  that finding says it applies. Build and parse the 11-byte payload. Mark in
-  code which fields were verified by eye and which weren't (direction).
+  Custom), with names and per-mode fields as `docs/config-app.md` §5.1 lists
+  them: brightness 0–4, speed 0–4, and the fixed-hue flag + HSV where that
+  finding says it applies. Direction isn't offered. Build and parse the
+  11-byte payload. Mark in code which fields were verified by eye and which
+  weren't (direction, the per-mode speed column, the 4/5 and 9/10 names).
 - Read the pad's current mode (`06 0a`, an allowlisted read).
-- `apply(...)`: one guarded write through the vendored path (backup, write,
-  exact readback), skipped when the pad already holds that payload. Never
-  `06 14`, never `06 12`, never past the 11 bytes.
-- Profile `[lighting]` section per the design; `glra-osc lights` prints the
+- `apply(...)`: read the pad's 11 bytes, change only mode, brightness, speed,
+  colour flag and HSV (bytes 2, 3, 4, 6, 8–10), keep the rest as read (§5.3);
+  then one guarded write through the vendored path (backup, write, exact
+  readback), skipped when the pad already holds that payload. Never `06 14`,
+  never `06 12`, never past the 11 bytes.
+- Profile `[lighting]` section per §5.2 (`mode`, `brightness`, `speed`,
+  optional `color = [h, s, v]`; parsed by `profile.py`); `glra-osc lights` prints the
   pad's mode, and `glra-osc lights --apply` writes the profile's choice after
   showing what will change. Nothing writes lighting implicitly: not `run`,
   not profile load.

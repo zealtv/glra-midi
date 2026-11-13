@@ -4,7 +4,9 @@ Suggested model: Sonnet. Build to `docs/config-app.md`. **No pad writes while
 building**: the fake device and a `--demo` flag stand in for the pad.
 
 - **RGB mode**: a selector over `lighting.py`'s factory modes, with brightness,
-  speed and (where the mode takes one) a hue. It edits the profile. "Apply to
+  speed and (where the mode takes one) a hue, per `docs/config-app.md` §4.10
+  and §5; no direction field. With no `[lighting]` in the profile, Apply stays
+  disabled. It edits the profile. "Apply to
   pad" does the one guarded write, in a worker thread as glra-studio's
   `worker.py` does, and reports success, "already set" or the readback error.
   State next to it that each Apply is saved in the pad's memory. No write on

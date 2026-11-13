@@ -18,13 +18,15 @@ The inspector for the selected control, on the shown layer tab:
   be edited from any tab. Global and per-layer exclude each other (Bob,
   2026-11-13: no fall-through). Switching a control from per-layer to global
   replaces its per-layer events with the one event (ask before discarding
-  any); switching from global to layer n follows the design (default: the
-  event stays on the shown layer only, the other layers become empty).
-- Fields validate as typed; errors use the profile's own messages. Note numbers
-  also show names (C1 = 36, and say which octave convention).
+  any); switching from global to per-layer copies the event to every layer (design
+  §4.6, Claude's default since 2026-11-13; it was "shown layer only").
+- Fields validate as typed; errors use the profile's own messages (§4.9).
+  Note numbers also show names (C1 = 36, middle C = C3, §4.4).
+- Layouts per the wireframes in §4.5; CC inc/dec shows Inc/Dec plus a size,
+  stored as a signed `step`.
 - Every edit goes through the `profile-model` edit helpers and updates the
-  tile summary at once; copy/paste of one control's assignment between layers
-  or controls if the design includes it.
+  tile summary at once. No copy/paste and no undo this round (the design
+  leaves them out; note them in the tour's "later" list).
 
 Tests (offscreen): for each action kind, driving the controller's slots yields
 the expected profile; the layer-select rule; global ↔ per-layer switching both ways; invalid

@@ -15,9 +15,12 @@ yet) to take a profile:
 - Latch state per (control, layer) for per-layer controls, one state for a
   global control; switching layers sends nothing.
 - Per-event MIDI channel.
-- Note momentary and latch; CC set value; CC step and CC momentary **without
-  easing** (jump to the target), through one CC value table per (channel, cc)
-  that absolute dial turns share. `cc-easing` adds the glides.
+- Note momentary and latch; CC set value; CC step and CC momentary (with its
+  latch mode) **without easing** (jump to the target), through one CC value
+  table per (channel, cc) that absolute dial turns share, seeded from
+  `initial` (design §3.4). What each kind sends, including "`cc-set` always
+  sends", is the table in §3.5. `cc-easing` adds the glides.
+- `release_all()` per §3.7 (minus the glide part, which `cc-easing` adds).
 - An observer hook for layer changes, so the runner can print them.
 
 Carried from the dropped `banks` sketch: each layer keeps its own latch and
