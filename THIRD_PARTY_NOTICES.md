@@ -8,7 +8,8 @@ glra-osc is licensed GPL-3.0-only (see `LICENSE`).
 [glra-studio](https://github.com/imolitor/glra-studio) (GPL-3.0-only),
 Copyright (c) 2026 GLRA Studio contributors, taken at commit `33aa281`. The
 files keep their SPDX and copyright headers. See `glra_osc/device/README.md` for
-the file list.
+the file list. `lighting.py` (the factory lighting payload checks and guarded write)
+was added on 2026-11-13 from the same commit.
 
 ## Dependencies
 
