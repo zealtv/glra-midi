@@ -19,9 +19,11 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = ["ruff==0.12.12"]
+gui = ["PySide6==6.10.2"]
 
 [project.scripts]
 glra-osc = "glra_osc.cli:main"
+glra-osc-config = "glra_osc.app:main"
 
 [tool.setuptools.packages.find]
 include = ["glra_osc*"]
@@ -36,3 +38,4 @@ select = ["E4", "E7", "E9", "F"]
 [tool.setuptools.package-data]
 glra_osc = ["*.toml"]
 "glra_osc.device" = ["layout.json"]
+"glra_osc.app" = ["qml/*.qml", "*.toml"]

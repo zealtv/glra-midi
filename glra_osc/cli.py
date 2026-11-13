@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
-"""Command line entry point: `--version`, `monitor`, `run`, `lights` and `unsilence`."""
+"""Command line entry point: `--version`, `monitor`, `run`, `lights`, `config` and `unsilence`."""
 
 import argparse
 import sys
@@ -9,6 +9,12 @@ from . import __version__
 
 
 def main(argv=None):
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if argv[:1] == ["config"]:
+        # Everything after `config` belongs to the app (`--demo`, `--help`, ...).
+        from .app import main as config_main
+
+        return config_main(argv[1:])
     parser = argparse.ArgumentParser(prog="glra-osc", description=__doc__)
     parser.add_argument("--version", action="version", version=f"glra-osc {__version__}")
     sub = parser.add_subparsers(dest="command")
@@ -37,6 +43,11 @@ def main(argv=None):
         action="store_true",
         help="write the profile's [lighting] to the pad after showing the change and asking "
         "(each write is saved in the pad's flash)",
+    )
+    sub.add_parser(
+        "config",
+        help="open the configuration app (needs the `gui` extra); see `glra-osc config --help`",
+        add_help=False,
     )
     sub.add_parser(
         "unsilence",
