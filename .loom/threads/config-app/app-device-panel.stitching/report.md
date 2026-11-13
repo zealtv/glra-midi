@@ -61,7 +61,7 @@ but nothing here has run it against hardware.
 
 ## How I checked
 
-- `tests/test_app_device.py` (46): pure edits (`devicepanel`); `FakePad`; `RealPad` with
+- `tests/test_app_device.py` (48): pure edits (`devicepanel`); `FakePad`; `RealPad` with
   `lighting.connect` swapped for the existing Reader-level fake from `test_lighting.py` (read
   sends nothing and asks only opcode `06 0a`; apply is one guarded `06 0b` write, then "unchanged"
   with no second write); the controller with a `FakePad` (read at start; not found; refresh; each
