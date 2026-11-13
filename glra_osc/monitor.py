@@ -71,7 +71,17 @@ def _next_event(events, timeout):
         return None
 
 
-def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None, clock=time.monotonic):
+def watch(
+    decoder,
+    on_report,
+    say,
+    on_lost=None,
+    on_pad=None,
+    on_tick=None,
+    on_wake=None,
+    wake_at=None,
+    clock=time.monotonic,
+):
     """Read the pad until KeyboardInterrupt; the loop `monitor` and `run` share.
 
     `on_report(source, data, t, wall)` gets each raw report. When an interface
@@ -83,7 +93,10 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None, cloc
     on `silence.check_interval`'s schedule while the pad is present: every
     FAST_CHECK_SECONDS for FAST_WINDOW_SECONDS after each `on_pad`, then every
     CHECK_SECONDS (silent-capture re-verifies its key mapping there); it should
-    not raise. `clock` is injectable for tests.
+    not raise. `wake_at()` returns the clock time the caller wants `on_wake(now)` by (or
+    None): the loop never sleeps past it, and calls `on_wake(clock())` after every wait, after
+    any queued report has been handled, so a pad event never waits on it. `run` drives glide
+    ticks and profile reloads from these. `clock` is injectable for tests.
     """
     events = queue.Queue()
     stop = threading.Event()
@@ -137,10 +150,14 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None, cloc
             due = next_scan
             if on_tick and pad_present:
                 due = min(due, next_tick)
+            if wake_at:
+                wake = wake_at()
+                if wake is not None:
+                    due = min(due, wake)
             item = _next_event(events, min(0.25, max(0.0, due - now)))
             if item is None:
-                continue
-            if item[0] == "report":
+                pass
+            elif item[0] == "report":
                 _, source, data, t, wall = item
                 on_report(source, data, t, wall)
             elif item[0] == "opened":
@@ -156,6 +173,8 @@ def watch(decoder, on_report, say, on_lost=None, on_pad=None, on_tick=None, cloc
                     on_lost()
                 waiting_noted = False
                 say(f"# {source} interface lost ({why}); retrying")
+            if on_wake:
+                on_wake(clock())
     except KeyboardInterrupt:
         pass
     finally:
