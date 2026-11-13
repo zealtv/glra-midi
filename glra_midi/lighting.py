@@ -20,7 +20,7 @@ from pathlib import Path
 
 from .device import lighting as _studio
 from .device import transactions as _transactions
-from .profile import APP_DIR_NAME
+from .profile import app_dir
 
 PAYLOAD_SIZE = 11
 BRIGHTNESS_RANGE = (0, 4)
@@ -453,9 +453,8 @@ def apply(reader, identity, lighting, directory):
 
 
 def data_dir(home=None):
-    """Where backups and audit logs go: next to the profile."""
-    home = Path.home() if home is None else Path(home)
-    return home / "Library" / "Application Support" / APP_DIR_NAME
+    """Where backups and audit logs go: the application folder, next to the profiles."""
+    return app_dir(home)
 
 
 @contextmanager

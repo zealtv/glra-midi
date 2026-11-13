@@ -501,6 +501,13 @@ class ApplyTests(unittest.TestCase):
         self.assertEqual(sorted(studio.MODES), [0, 1, 2, 4])
 
 
+class DataDirTests(unittest.TestCase):
+    def test_the_data_folder_is_the_application_folder(self):
+        # One definition of the app folder (review finding 13).
+        self.assertEqual(lighting.data_dir("/Users/someone"), profile.app_dir("/Users/someone"))
+        self.assertEqual(lighting.data_dir(), profile.app_dir())
+
+
 class CommandTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
