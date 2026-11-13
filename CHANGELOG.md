@@ -6,13 +6,15 @@ All notable changes to glra-midi go in this file. The format follows
 0.x a minor bump (0.1 to 0.2) may break the profile format or the command line.
 
 Each release gets a `## [X.Y.Z] - YYYY-MM-DD` section; `tools/release-check.sh` fails when the
-version in `glra_midi/__init__.py` has none. The list under Unreleased below was drafted on
-2026-11-13 from the loom's tied stitches (`midi-mvp`, `config-app`) and the README; Bob reads
-it again at `first-release` before it becomes the 0.1.0 section.
+version in `glra_midi/__init__.py` has none. The 0.1.0 section was drafted on 2026-11-13 from
+the loom's tied stitches (`midi-mvp`, `config-app`) and the README, and Bob read it before the
+release.
 
 ## [Unreleased]
 
-First public release, planned as 0.1.0. The project began as `glra-osc` and was renamed
+## [0.1.0] - 2026-11-13
+
+First public release. The project began as `glra-osc` and was renamed
 `glra-midi` on 2026-11-13.
 
 ### Added
