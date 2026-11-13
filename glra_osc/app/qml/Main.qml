@@ -44,7 +44,7 @@ ApplicationWindow {
     property bool quitOk: false
     property bool deviceOpen: false  // the device panel strip, collapsed at start
     onClosing: function(close) {
-        if (controller.dirty && !quitOk) {
+        if ((controller.dirty || controller.applying) && !quitOk) {
             close.accepted = false
             controller.requestQuit()
         }

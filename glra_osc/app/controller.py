@@ -91,8 +91,10 @@ class Controller(QObject):
         self._pad_now = ""
         self._pad_busy = False  # a read or the Apply write is running
         self._cooling = False
+        self._applying = False  # the one pad write is running; the window must not close now
+        self._quit_waiting = False  # a quit was asked for while that write ran
         self._last = ""  # the Apply result line
-        self._last_kind = ""  # "ok" | "info" | "err"
+        self._last_kind = ""  # "ok" | "info" | "warn" | "err"
         self._port_draft = None  # (text, error) while the port field holds something invalid
         self._after = None  # what to do once the unsaved-changes prompt is answered
         self._confirmed = None  # what to do on "yes" to a confirmPrompt
@@ -605,6 +607,7 @@ class Controller(QObject):
         if not self._can_apply():
             return
         self._pad_busy = True
+        self._applying = True
         self._last, self._last_kind = "", ""
         directory = prof.app_dir(self._home) / "backups"
         self._worker.submit("apply", self._pad.apply, self._profile.lighting, directory)
@@ -619,7 +622,13 @@ class Controller(QObject):
             self._pad_connected = reading.connected
             self._pad_headline, self._pad_now = describe_reading(reading)
         else:
-            if error is not None:
+            self._applying = False
+            if isinstance(error, dev.lights.WriteNotConfirmed):
+                # The write went out: say so, and show what the pad holds now when it could be read.
+                self._last, self._last_kind = str(error), "warn"
+                if error.after is not None:
+                    self._pad_now = describe_reading(PadReading(True, None, bytes.fromhex(error.after)))[1]
+            elif error is not None:
                 self._last, self._last_kind = f"Not applied: {error}", "err"
             else:
                 self._pad_now = describe_reading(PadReading(True, None, result.payload))[1]
@@ -630,6 +639,12 @@ class Controller(QObject):
             if self._cooldown_ms > 0:
                 self._cooling = True
                 QTimer.singleShot(self._cooldown_ms, self._end_cooldown)
+        if kind != "read" and self._quit_waiting:
+            self._quit_waiting = False
+            self._notice = ""
+            self._refresh()
+            self._guard_unsaved(self.quitApproved.emit)
+            return
         self._refresh()
 
     def _end_cooldown(self):
@@ -913,9 +928,25 @@ class Controller(QObject):
         self._load(self._path)
         self._refresh()
 
+    @Property(bool, notify=changed)
+    def applying(self):
+        """True while the Apply write runs on the worker; the window refuses to close then."""
+        return self._applying
+
     @Slot()
     def requestQuit(self):
+        """The window was asked to close. While the one pad write runs, wait for it (with a
+        message) rather than quit mid-write; then ask about unsaved changes as usual."""
+        if self._applying:
+            self._quit_waiting = True
+            self._notice = "Waiting for the pad write to finish before closing."
+            self._refresh()
+            return
         self._guard_unsaved(self.quitApproved.emit)
+
+    def shutdown(self):
+        """Join the pad worker; `gui.main` calls this after the event loop ends."""
+        self._worker.shutdown()
 
     # --- changes on disk ----------------------------------------------------------------
 

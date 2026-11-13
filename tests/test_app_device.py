@@ -408,6 +408,93 @@ class ApplyTests(DeviceCase):
         self.assertEqual(len(self.pad.apply_calls), 1)  # no retry
         self.assertTrue(apply["enabled"])  # the user may try again
 
+    def test_a_write_that_read_back_differently_is_not_called_not_applied(self):
+        before = self.pad.payload
+        expected = lights.build(before, BREATHING)
+        after = bytearray(expected)
+        after[lights.HUE] = 0x80
+        self.pad.error = lights.WriteNotConfirmed(
+            before.hex(), expected.hex(), bytes(after).hex(), "/tmp/backups/x-lighting-before.json",
+            "Lighting readback did not match.",
+        )
+        self.c.applyLighting()
+        self.c.wait_for_pad()
+        apply = self.device["apply"]
+        self.assertEqual(apply["lastKind"], "warn")
+        self.assertTrue(apply["last"].startswith("Written to the pad"))
+        self.assertNotIn("Not applied", apply["last"])
+        self.assertNotIn("paused", apply["last"])
+        for text in (before.hex(), expected.hex(), bytes(after).hex(), "/tmp/backups/x-lighting-before.json"):
+            self.assertIn(text, apply["last"])
+        self.assertEqual(self.device["pad"]["now"], lights.describe(bytes(after)))
+        self.assertTrue(apply["enabled"])  # nothing pauses later writes
+
+    def test_nothing_sent_still_says_not_applied(self):
+        self.pad.error = ValueError("Lighting changed outside the app.")
+        self.c.applyLighting()
+        self.c.wait_for_pad()
+        self.assertEqual(self.device["apply"]["last"], "Not applied: Lighting changed outside the app.")
+
+    def test_quit_while_a_write_runs_waits_for_it(self):
+        quits = []
+        self.c.quitApproved.connect(lambda: quits.append(True))
+        gate = threading.Event()
+        real = self.pad.apply
+
+        def slow(lighting, directory):
+            gate.wait(5)
+            return real(lighting, directory)
+
+        self.pad.apply = slow
+        self.c.applyLighting()
+        self.assertTrue(self.c.applying)
+        self.c.requestQuit()
+        self.assertEqual(quits, [])  # refused: the write is still running
+        self.assertIn("pad write", self.c.notice)
+        gate.set()
+        self.c.wait_for_pad()
+        self.assertFalse(self.c.applying)
+        self.assertEqual(quits, [True])  # then it goes ahead
+        self.assertEqual(self.c.notice, "")
+        self.assertEqual(len(self.pad.writes), 1)
+
+    def test_quit_waits_even_when_the_write_fails(self):
+        quits = []
+        self.c.quitApproved.connect(lambda: quits.append(True))
+        gate = threading.Event()
+
+        def failing(lighting, directory):
+            gate.wait(5)
+            raise ValueError("no")
+
+        self.pad.apply = failing
+        self.c.applyLighting()
+        self.c.requestQuit()
+        gate.set()
+        self.c.wait_for_pad()
+        self.assertEqual(quits, [True])
+
+    def test_quit_with_no_write_running_is_immediate(self):
+        quits = []
+        self.c.quitApproved.connect(lambda: quits.append(True))
+        self.assertFalse(self.c.applying)
+        self.c.requestQuit()
+        self.assertEqual(quits, [True])
+
+    def test_shutdown_joins_the_worker(self):
+        finished = []
+        real = self.pad.apply
+
+        def slow(lighting, directory):
+            time.sleep(0.1)
+            finished.append(True)
+            return real(lighting, directory)
+
+        self.pad.apply = slow
+        self.c.applyLighting()
+        self.c.shutdown()  # returns only once the worker's call has finished
+        self.assertEqual(finished, [True])
+
     def test_a_click_while_a_write_runs_is_ignored(self):
         gate = threading.Event()
         real = self.pad.apply

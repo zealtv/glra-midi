@@ -281,6 +281,34 @@ class DevicePanelTests(QmlCase):
         self.window.setProperty("deviceOpen", True)
         self.settle()
 
+    def test_closing_the_window_during_an_apply_is_refused_until_it_ends(self):
+        import threading
+
+        self.open_panel()
+        self.window.setProperty("quitOk", False)
+        gate = threading.Event()
+        real = self.pad.apply
+
+        def slow(lighting, directory):
+            gate.wait(5)
+            return real(lighting, directory)
+
+        self.pad.apply = slow
+        self.window.show()
+        self.settle()
+        self.controller.applyLighting()
+        self.assertFalse(self.window.close())  # False: the window refused to close
+        self.settle()
+        self.assertTrue(self.window.property("visible"))
+        self.assertFalse(self.window.property("quitOk"))
+        self.assertIn("pad write", self.controller.notice)
+        gate.set()
+        self.controller.wait_for_pad()
+        self.settle()
+        self.assertTrue(self.window.property("quitOk"))  # the write ended; the quit went ahead
+        self.assertFalse(self.window.property("visible"))
+        self.assertEqual(len(self.pad.writes), 1)
+
     def test_loads_collapsed_then_a_click_on_the_strip_opens_it(self):
         self.load(pad=pads.FakePad())
         self.assertFalse(self.find("devicePanel").property("visible"))

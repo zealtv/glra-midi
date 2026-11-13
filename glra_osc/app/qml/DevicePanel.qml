@@ -32,7 +32,7 @@ Rectangle {
         return list
     }
     function lastColor() {
-        return applyState.lastKind === "err" ? pal.errLine : applyState.lastKind === "ok" ? pal.accent : pal.muted
+        return applyState.lastKind === "err" ? pal.errLine : applyState.lastKind === "warn" ? pal.warnLine : applyState.lastKind === "ok" ? pal.accent : pal.muted
     }
 
     RowLayout {

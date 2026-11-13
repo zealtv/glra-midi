@@ -135,6 +135,23 @@ def _readback_error(window, controller):
     controller.applyLighting()
 
 
+def _apply_mismatch(window, controller):
+    """The write went out and the pad read back something else (the first real Apply may)."""
+    _open_panel(window, controller)
+    before = controller.pad.payload
+    expected = lights.build(before, controller.profile.lighting)
+    other = bytearray(expected)
+    other[lights.HUE] = 0x80  # a cached hue the pad kept
+    controller.pad.error = lights.WriteNotConfirmed(
+        before.hex(),
+        expected.hex(),
+        bytes(other).hex(),
+        "~/Library/Application Support/glra-osc/backups/20261113T120000.000000Z-lighting-before.json",
+        "Lighting readback did not match.",
+    )
+    controller.applyLighting()
+
+
 def _bad_port(window, controller):
     _open_panel(window, controller)
     controller.setPort("")
@@ -183,6 +200,7 @@ STATES = {
     "device-panel-applied": _panel(("applyLighting",)),
     "device-panel-already-set": _already_set,
     "device-panel-error": _readback_error,
+    "device-panel-apply-mismatch": _apply_mismatch,
     "device-panel-bad-port": _bad_port,
     "device-orientation-top": _panel(orientation="dials-top"),
     "device-orientation-right": _panel(orientation="dials-right"),
@@ -277,6 +295,7 @@ def main(argv=None):
         elif args.smoke_test:
             QTimer.singleShot(1500, app.quit)
         code = app.exec()
+        controller.shutdown()  # no pad call outlives the window
         for line in warnings:
             print(line, file=sys.stderr)
         del engine
