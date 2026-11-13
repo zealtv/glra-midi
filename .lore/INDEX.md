@@ -1,5 +1,6 @@
 <!-- auto-generated; run lore.sh index to refresh -->
 
+- [2026-11-13-patch-release-0-1-1](items/2026-11-13-patch-release-0-1-1/) — glra-midi 0.1.1, the tour-fixes patch release (2026-11-13) — Claude cut and published glra-midi 0.1.1 on Bob's standing word ("once 4 is complete you can publish the new release"): tag `v0.1.1` on `4b32fbf`, a GitHub release with wheel and sdist, carrying the four `patch-0.1.1` stitches.
 - [2026-11-13-mcu-chip-lead-m9f9520](items/2026-11-13-mcu-chip-lead-m9f9520/) — Outside chip-ID lead: ZXW / Masses Chip M9F9520 (another agent's report, 2026-11-13) — A research report another AI agent produced from the search terms in
 - [2026-11-13-layer-colour-wear-estimate](items/2026-11-13-layer-colour-wear-estimate/) — Layer-colour feasibility: flash-wear lifetime estimates (2026-11-13) — Claude's desk estimate of how long the K16_N3's flash would last if the host changed the pad's colour on every layer change, for 10-50 changes a session and 10, 50 or 300 sessions a year, with one pad-wide colour per layer versus per-key colours, and ways to cut the writes. Not implemented; Bob deferred it.
 - [2026-11-13-k16n3-board-photos](items/2026-11-13-k16n3-board-photos/) — K16_N3 board photos (PCB underside, 2026-11-13) — Six photos Bob took of his pad's opened PCB on 2026-11-13 for `firmware-feasibility`, kept whole as they arrived via Tengu.

@@ -11,3 +11,10 @@ the pad with Bob.
 
 Stitches: fix-lighting-readback, fix-quit-crash, layer-removal-renumber,
 app-review-polish. Then cut 0.1.1 per `docs/releasing.md` with Bob.
+
+## Done (Claude, 2026-11-13 evening)
+
+All four stitches tied; 0.1.1 released (`lore:2026-11-13-patch-release-0-1-1`).
+Two checks remain for Bob at the pad, not done in this run: the lighting Apply
+sequence reads back clean ("Applied and read back."), and quitting the app with
+the pad attached leaves no new `Python-*.ips`.
