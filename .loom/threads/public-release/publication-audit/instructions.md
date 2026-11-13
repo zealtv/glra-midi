@@ -18,3 +18,7 @@ Write `audit.md`: each finding, the commits and paths it touches, and options
 (remove from the tree only, rewrite history, accept). History rewrites and the
 choice of what stays are Bob's. Fixes that only touch the current tree and are
 clearly right (a missing header) can land here.
+
+Bob, 2026-11-13: "keep the photos" (his board photos in
+`lore:2026-11-13-k16n3-board-photos` go public). Note anything else visible in
+them, but don't propose removing them.

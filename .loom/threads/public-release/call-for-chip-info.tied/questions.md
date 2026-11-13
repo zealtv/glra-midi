@@ -16,3 +16,11 @@
    show more than the chip).
 4. **The `chip-info` label** doesn't exist yet. `first-release` creates it
    (command in the pinned-issue draft's header).
+
+## Bob's answers (2026-11-13)
+
+"no contact details, but naming the manufacturer is good, wording is fine,
+keep the photos". So: the doc stays as written (companies named, no email or
+phone); wording accepted; the board photos stay in the public repo (Claude's
+reading: kept in lore as they are, not embedded in the page; `publication-audit`
+doesn't flag them for removal).
