@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
 # Render a named app state to a PNG, offscreen: tools/app-capture.sh <state> <out.png> [--dark]
 # States are listed by `python -m glra_midi.app --help`. Needs the `gui` extra.
 set -e

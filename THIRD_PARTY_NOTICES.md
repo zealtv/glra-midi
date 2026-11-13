@@ -36,6 +36,7 @@ Dependencies keep their own licences.
 | HIDAPI | bundled by cython-hidapi | https://github.com/libusb/hidapi#license |
 | rtmidi2 | >=1.5.0 | https://github.com/gesellkammer/rtmidi2 |
 | RtMidi | bundled by rtmidi2 | https://github.com/thestk/rtmidi |
+| tomli-w | 1.2.0 | https://github.com/hukkin/tomli-w (MIT) |
 | Qt for Python (`PySide6`, optional `gui` extra) | 6.10.2 | https://doc.qt.io/qtforpython-6/ (LGPL-3.0 / GPL-3.0; see also Qt's own notices) |
 
 glra-midi is an independent community project, not an official product of

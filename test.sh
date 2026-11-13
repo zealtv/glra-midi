@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
 # Lint + tests. Run from anywhere; uses the repo's .venv.
 set -e
 cd "$(dirname "$0")"
