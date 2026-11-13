@@ -298,6 +298,20 @@ class ErrorTests(unittest.TestCase):
         self.assertError("version = 2\n", "version", "got 2", start="version")
         self.assertError("version = true\n", start="version")
         self.assertError('version = "1"\n', start="version")
+        self.assertError("version = 1.0\n", "got 1.0", start="version")
+
+    def test_a_number_in_a_table_name_has_one_spelling(self):
+        # Review 11: `[key."01"]` used to load as key 1, and beat a `[key.1]` written before it.
+        note = "kind = 'note'\nnote = 36\n"
+        for name in ('key."01"', 'key."+1"', 'key."001"', 'enc."01".push'):
+            self.assertError(self.key(note, name), "unknown control", start=name.split(".")[0])
+        self.assertError(
+            "version = 1\n[key.1]\n" + note + '[key."01"]\nkind = \'note\'\nnote = 40\n',
+            "unknown control",
+        )
+        self.assertError(
+            "version = 1\n[key.1.layers.\"01\"]\n" + note, "layer doesn't exist", start="key.1.layers.01"
+        )
 
     def test_unknown_top_level_key_including_legacy_global(self):
         self.assertError("version = 1\n[global]\nchannel = 2\n", start="global: unknown key")

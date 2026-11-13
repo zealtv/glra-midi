@@ -429,6 +429,12 @@ def _is_int(value):
     return isinstance(value, int) and not isinstance(value, bool)
 
 
+def _is_number_name(name):
+    """A table name written as a plain number: `"1"`, not `"01"` or `"+1"`, so one control can't
+    appear under two spellings (review 11)."""
+    return name.isascii() and name.isdigit() and str(int(name)) == name
+
+
 def _int(value, where, lo, hi):
     if not _is_int(value) or not lo <= value <= hi:
         raise ProfileError(f"{where}: expected an integer {lo}..{hi}, got {value!r}")
@@ -488,7 +494,7 @@ def _parse_control(table, name, count):
         kinds = TURN_KINDS if turn else PRESS_KINDS
         events = {}
         for lname, sub in layers.items():
-            if not (lname.isascii() and lname.isdigit() and MIN_LAYERS <= int(lname) <= count):
+            if not (_is_number_name(lname) and MIN_LAYERS <= int(lname) <= count):
                 raise ProfileError(f"{name}.layers.{lname}: layer doesn't exist (count = {count})")
             hint = None if turn else name
             events[int(lname)] = _parse_event(sub, f"{name}.layers.{lname}", kinds, hint)
@@ -579,7 +585,7 @@ def _control_tables(data):
 def _numbered(table, count, path):
     table = _table(table, path)
     for name, sub in table.items():
-        if not (name.isascii() and name.isdigit() and 1 <= int(name) <= count):
+        if not (_is_number_name(name) and 1 <= int(name) <= count):
             raise ProfileError(f"{path}.{name}: unknown control (expected 1..{count})")
         yield int(name), sub
 
@@ -592,7 +598,7 @@ def _build(data):
         )
     _check_keys(data, ("version", "midi", "pad", "layers", "lighting", "key", "enc"), "")
     version = data["version"]
-    if version != PROFILE_VERSION or isinstance(version, bool):
+    if not _is_int(version) or version != PROFILE_VERSION:
         raise ProfileError(
             f"version: this glra-midi reads version {PROFILE_VERSION}, got {version!r}"
         )

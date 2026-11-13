@@ -12,6 +12,15 @@ release.
 
 ## [Unreleased]
 
+### Changed
+
+- Profile files are stricter about two spellings that used to load. A control or layer table
+  written with extra zeros or a sign (`[key."01"]`, `layers."01"`) now fails with "unknown control"
+  or "layer doesn't exist", where before it loaded as key 1 and silently beat a `[key.1]` table
+  written earlier in the file. `version = 1.0` (a float) now fails with "this glra-midi reads
+  version 1"; write `version = 1`. Files the app saves, and the shipped default profile, use
+  neither spelling.
+
 ### Fixed
 
 - Config app: removing a layer now renumbers the `layer-set` keys that point above it, so
