@@ -39,7 +39,7 @@ Python 3.13+ (as of 2026-11-12 Bob's only Python is `/opt/homebrew/bin/python3.1
 
 ```sh
 /opt/homebrew/bin/python3.14 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
+.venv/bin/pip install -e '.[dev,gui]'   # gui = PySide6 for the config app; app tests skip without it
 ./test.sh              # ruff + unittest
 .venv/bin/glra-osc --version
 ```

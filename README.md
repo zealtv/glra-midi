@@ -52,10 +52,15 @@ Needs Python 3.13+ on macOS (Homebrew's `python3.14` works).
 
 ```sh
 /opt/homebrew/bin/python3.14 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
-./test.sh          # ruff + unittest
+.venv/bin/pip install -e '.[dev,gui]'   # gui: PySide6, for the configuration app
+./test.sh          # ruff + unittest (the app tests skip without the gui extra)
 .venv/bin/glra-osc --version
 ```
+
+The configuration app (work in progress: it shows a profile's layers and tiles and opens,
+saves and reloads profiles; editing fields come later) starts with `glra-osc config`
+or `glra-osc-config`; `glra-osc config --demo` runs it on a throwaway fixture profile.
+`tools/app-capture.sh <state> <out.png>` renders a named state offscreen.
 
 ## Licence
 
