@@ -23,8 +23,8 @@ and `tests/test_transactions.py`).
 `model.py` and `learn.py` came along because `transactions.py` imports
 `VISIBLE_SLOTS` from `model.py`, which imports `usage_name` from `learn.py`.
 `lighting.py` came in with `loom:lighting-modes` (`config-app`, 2026-11-13), from
-the same source commit. Two limits in it matter here, and `glra_midi/lighting.py`
-works around both without editing this file:
+the same source commit. Three limits in it matter here, and `glra_midi/lighting.py`
+works around these without editing this file:
 
 - `MODES` names only 0, 1, 2 and 4 (tested on firmware 100); `validate` refuses
   the rest. The wrapper widens `MODES` to firmware 103's 0-12 for the length of
@@ -33,6 +33,10 @@ works around both without editing this file:
   firmware 100 / PID 0x246D. The wrapper lets exactly Bob's fingerprint
   (firmware 103, PID 0x2475) through for the length of one write, as
   `unique-assignments` did on 2026-11-12 (`.loom/tied/midi-mvp/unique-assignments.tied/`).
+- `write` compares the readback with the bytes sent, exactly, but firmware 103 rewrites
+  byte 7 (flag on) and HSV (flag off) when it stores a payload. For the length of one write
+  the wrapper hands that check the sent bytes when the read differs only there
+  (`readback_differences`, `loom:fix-lighting-readback`, 2026-11-13).
 
 To sync with a newer glra-studio, diff against the commit above and update
 this note.
