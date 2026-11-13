@@ -4,21 +4,31 @@ import unittest
 
 from glra_osc.engine import Engine, describe
 from glra_osc.events import ControlEvent
-from glra_osc.mapping import load_mapping, parse_mapping
-from glra_osc.profile import parse_profile, profile_from_mapping
+from glra_osc.profile import parse_profile
 
 
 def ev(control, action, t=0.0):
     return ControlEvent(control, action, t)
 
 
-def engine(text):
-    return Engine(profile_from_mapping(parse_mapping(text)))
+def engine(text, **kwargs):
+    """An engine for profile TOML (the `version` line is added)."""
+    return Engine(parse_profile("version = 1\n" + text), **kwargs)
 
 
-class DefaultMappingTests(unittest.TestCase):
+def one_layer_default():
+    """Today's old default mapping as a profile: keys 1..16 are notes 36..51, dial pushes are
+    notes 52..54, dial turns are relative CC 16..18; one layer, everything global."""
+    parts = ["[layers]\ncount = 1\n"]
+    parts += [f'[key.{n}]\nkind = "note"\nnote = {35 + n}\n' for n in range(1, 17)]
+    parts += [f'[enc.{n}.push]\nkind = "note"\nnote = {51 + n}\n' for n in (1, 2, 3)]
+    parts += [f'[enc.{n}.turn]\nkind = "cc-relative"\ncc = {15 + n}\n' for n in (1, 2, 3)]
+    return "".join(parts)
+
+
+class OneLayerGlobalTests(unittest.TestCase):
     def setUp(self):
-        self.e = Engine(profile_from_mapping(load_mapping()))
+        self.e = engine(one_layer_default())
 
     def test_key_momentary_note(self):
         self.assertEqual(self.e.handle(ev("key.1", "down")), [bytes([0x90, 36, 127])])
@@ -64,40 +74,40 @@ class DefaultMappingTests(unittest.TestCase):
 
 class BindingVariantTests(unittest.TestCase):
     def test_channel_goes_into_the_status_byte(self):
-        e = engine("[global]\nchannel = 10\n[key.1]\nnote = 60\nvelocity = 90\n")
+        e = engine('[midi]\nchannel = 10\n[key.1]\nkind = "note"\nnote = 60\nvelocity = 90\n')
         self.assertEqual(e.handle(ev("key.1", "down")), [bytes([0x99, 60, 90])])
         self.assertEqual(e.handle(ev("key.1", "up")), [bytes([0x89, 60, 0])])
 
     def test_missing_control_is_unmapped(self):
-        e = engine("[key.1]\nnote = 60\n")
+        e = engine('[key.1]\nkind = "note"\nnote = 60\n')
         self.assertEqual(e.handle(ev("key.2", "down")), [])
         self.assertEqual(e.handle(ev("enc.1", "cw")), [])
 
-    def test_momentary_cc_uses_on_and_off_values(self):
-        e = engine("[key.1]\ncc = 64\non = 100\noff = 5\n")
+    def test_momentary_cc_uses_high_and_low_values(self):
+        e = engine('[key.1]\nkind = "cc-momentary"\ncc = 64\nlow = 5\nhigh = 100\n')
         self.assertEqual(e.handle(ev("key.1", "down")), [bytes([0xB0, 64, 100])])
         self.assertEqual(e.handle(ev("key.1", "up")), [bytes([0xB0, 64, 5])])
 
     def test_held_momentary_cc_is_released_on_exit(self):
-        e = engine("[key.1]\ncc = 64\non = 100\noff = 5\n")
+        e = engine('[key.1]\nkind = "cc-momentary"\ncc = 64\nlow = 5\nhigh = 100\n')
         e.handle(ev("key.1", "down"))
         self.assertEqual(e.release_all(), [bytes([0xB0, 64, 5])])
 
-    def test_toggle_note_flips_on_down_and_ignores_up(self):
-        e = engine('[key.1]\nnote = 60\nmode = "toggle"\n')
+    def test_latch_note_flips_on_down_and_ignores_up(self):
+        e = engine('[key.1]\nkind = "note"\nnote = 60\nmode = "latch"\n')
         self.assertEqual(e.handle(ev("key.1", "down")), [bytes([0x90, 60, 127])])
         self.assertEqual(e.handle(ev("key.1", "up")), [])
         self.assertEqual(e.handle(ev("key.1", "down")), [bytes([0x80, 60, 0])])
         self.assertEqual(e.release_all(), [])
 
-    def test_toggle_note_left_on_is_released_and_starts_off_again(self):
-        e = engine('[key.1]\nnote = 60\nmode = "toggle"\n')
+    def test_latch_note_left_on_is_released_and_starts_off_again(self):
+        e = engine('[key.1]\nkind = "note"\nnote = 60\nmode = "latch"\n')
         e.handle(ev("key.1", "down"))
         self.assertEqual(e.release_all(), [bytes([0x80, 60, 0])])
         self.assertEqual(e.handle(ev("key.1", "down")), [bytes([0x90, 60, 127])])
 
-    def test_toggle_cc_sends_on_off_and_keeps_its_value_on_exit(self):
-        e = engine('[key.1]\ncc = 20\nmode = "toggle"\n')
+    def test_latch_cc_sends_on_off_and_keeps_its_value_on_exit(self):
+        e = engine('[key.1]\nkind = "cc-momentary"\ncc = 20\nmode = "latch"\n')
         self.assertEqual(e.handle(ev("key.1", "down")), [bytes([0xB0, 20, 127])])
         self.assertEqual(e.release_all(), [])
         self.assertEqual(e.handle(ev("key.1", "down")), [bytes([0xB0, 20, 0])])
@@ -111,34 +121,33 @@ class TurnTests(unittest.TestCase):
             "signed-bit": (1, 65),
         }
         for encoding, (cw, ccw) in expected.items():
-            e = engine(f'[enc.1.turn]\ntype = "relative"\ncc = 9\nencoding = "{encoding}"\n')
+            e = engine(f'[enc.1.turn]\nkind = "cc-relative"\ncc = 9\nencoding = "{encoding}"\n')
             self.assertEqual(e.handle(ev("enc.1", "cw")), [bytes([0xB0, 9, cw])], encoding)
             self.assertEqual(e.handle(ev("enc.1", "ccw")), [bytes([0xB0, 9, ccw])], encoding)
 
     def test_absolute_steps_from_initial(self):
-        e = engine('[enc.1.turn]\ntype = "absolute"\ncc = 7\ninitial = 10\nstep = 5\n')
+        e = engine('[enc.1.turn]\nkind = "cc-absolute"\ncc = 7\ninitial = 10\nstep = 5\n')
         self.assertEqual(e.handle(ev("enc.1", "cw")), [bytes([0xB0, 7, 15])])
         self.assertEqual(e.handle(ev("enc.1", "ccw")), [bytes([0xB0, 7, 10])])
 
     def test_absolute_clamps_and_stays_quiet_at_the_limits(self):
-        e = engine('[enc.1.turn]\ntype = "absolute"\ncc = 7\ninitial = 126\nstep = 5\n')
+        e = engine('[enc.1.turn]\nkind = "cc-absolute"\ncc = 7\ninitial = 126\nstep = 5\n')
         self.assertEqual(e.handle(ev("enc.1", "cw")), [bytes([0xB0, 7, 127])])
         self.assertEqual(e.handle(ev("enc.1", "cw")), [])
-        e = engine('[enc.1.turn]\ntype = "absolute"\ncc = 7\ninitial = 2\nstep = 5\n')
+        e = engine('[enc.1.turn]\nkind = "cc-absolute"\ncc = 7\ninitial = 2\nstep = 5\n')
         self.assertEqual(e.handle(ev("enc.1", "ccw")), [bytes([0xB0, 7, 0])])
         self.assertEqual(e.handle(ev("enc.1", "ccw")), [])
 
     def test_absolute_state_is_per_encoder(self):
         e = engine(
-            '[enc.1.turn]\ntype = "absolute"\ncc = 7\ninitial = 0\n'
-            '[enc.2.turn]\ntype = "absolute"\ncc = 8\ninitial = 100\n'
+            '[enc.1.turn]\nkind = "cc-absolute"\ncc = 7\ninitial = 0\n'
+            '[enc.2.turn]\nkind = "cc-absolute"\ncc = 8\ninitial = 100\n'
         )
         e.handle(ev("enc.1", "cw"))
         self.assertEqual(e.handle(ev("enc.2", "cw")), [bytes([0xB0, 8, 101])])
 
 
-def pengine(text, **kwargs):
-    return Engine(parse_profile("version = 1\n" + text), **kwargs)
+pengine = engine
 
 
 def down_up(e, control):

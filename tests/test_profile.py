@@ -5,7 +5,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from glra_osc.mapping import load_mapping
 from glra_osc.profile import (
     CONTROL_NAMES,
     CcAbsolute,
@@ -27,12 +26,10 @@ from glra_osc.profile import (
     default_profile_path,
     dump_profile,
     dumps_profile,
-    is_legacy_mapping,
     load_profile,
     make_global,
     make_per_layer,
     parse_profile,
-    profile_from_mapping,
     remove_layer,
     rename_layer,
     set_event,
@@ -605,75 +602,20 @@ class DefaultProfileTests(unittest.TestCase):
         self.assertEqual(len(self.p.controls), 16 + 6)
 
 
-class LegacyTests(unittest.TestCase):
-    def test_default_mapping_converts_to_a_one_layer_global_profile(self):
-        p = profile_from_mapping(load_mapping())
-        self.assertEqual((p.layer_count, p.layer_names, p.port, p.channel), (1, ("",), "GLRA K16", 1))
-        for n in range(1, 17):
-            self.assertEqual(p.controls[f"key.{n}"], Note(note=35 + n, velocity=127))
-        self.assertEqual([p.controls[f"enc.{n}.push"].note for n in (1, 2, 3)], [52, 53, 54])
-        for n in (1, 2, 3):
-            self.assertEqual(p.controls[f"enc.{n}.turn"], CcRelative(cc=15 + n))
-        self.assertEqual(validate(p), [])
+class NoLegacyTests(unittest.TestCase):
+    """Old mapping files stopped loading (Bob, 2026-11-13: "we can hard break")."""
 
-    def test_a_mapping_file_loads_through_parse_profile(self):
-        p = parse_profile(Path("glra_osc/default_mapping.toml").read_text(), source="m.toml")
-        self.assertEqual(p, profile_from_mapping(load_mapping()))
+    def test_a_file_without_version_is_an_error(self):
+        for text in ("", "[key.1]\nnote = 36\n"):
+            with self.assertRaises(ProfileError) as ctx:
+                parse_profile(text, source="m.toml")
+            message = str(ctx.exception)
+            self.assertTrue(message.startswith("m.toml: version: required"), message)
 
-    def test_toggled_cc_and_the_other_conversions(self):
-        text = """\
-[global]
-port = "Pad"
-channel = 5
-[key.3]
-cc = 20
-on = 100
-off = 10
-mode = "toggle"
-[key.4]
-note = 40
-velocity = 90
-mode = "toggle"
-[enc.1.push]
-cc = 7
-[enc.1.turn]
-type = "absolute"
-cc = 8
-initial = 100
-step = 4
-[enc.2.turn]
-type = "absolute"
-cc = 9
-[enc.3.turn]
-type = "relative"
-cc = 10
-encoding = "signed-bit"
-"""
-        p = parse_profile(text)
-        self.assertTrue(is_legacy_mapping(text))
-        self.assertEqual((p.port, p.channel), ("Pad", 5))
-        self.assertEqual(
-            p.controls["key.3"], CcMomentary(cc=20, low=10, high=100, ease_ms=0, mode="latch")
-        )
-        self.assertEqual(p.controls["key.4"], Note(note=40, velocity=90, mode="latch"))
-        self.assertEqual(p.controls["enc.1.push"], CcMomentary(cc=7))
-        self.assertEqual(p.controls["enc.1.turn"], CcAbsolute(cc=8, step=4, initial=100))
-        self.assertEqual(p.controls["enc.2.turn"], CcAbsolute(cc=9, step=1, initial=64))
-        self.assertEqual(p.controls["enc.3.turn"], CcRelative(cc=10, encoding="signed-bit"))
-        # and saving the converted profile writes a real profile that reads back the same
-        self.assertFalse(is_legacy_mapping(dumps_profile(p)))
-        self.assertEqual(parse_profile(dumps_profile(p)), p)
-
-    def test_legacy_errors_surface_as_profile_errors(self):
+    def test_the_old_default_mapping_file_doesnt_load(self):
         with self.assertRaises(ProfileError) as ctx:
-            parse_profile("[key.1]\nnote = 999\n", source="old.toml")
-        self.assertIn("old.toml", str(ctx.exception))
-        self.assertIn("key.1.note", str(ctx.exception))
-
-    def test_is_legacy_mapping(self):
-        self.assertTrue(is_legacy_mapping(""))
-        self.assertFalse(is_legacy_mapping("version = 1\n"))
-        self.assertFalse(is_legacy_mapping("[key.1\n"))
+            load_profile("glra_osc/default_mapping.toml")
+        self.assertIn("version", str(ctx.exception))
 
 
 class ValidateTests(unittest.TestCase):

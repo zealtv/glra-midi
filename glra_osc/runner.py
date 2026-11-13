@@ -13,10 +13,43 @@ import sys
 
 from .decode import Decoder
 from .engine import Engine, describe
-from .mapping import load_mapping
+from .mapping import AbsoluteTurn, CcBinding, NoteBinding, RelativeTurn, load_mapping
 from .monitor import watch
-from .profile import profile_from_mapping
+from .profile import CcAbsolute, CcMomentary, CcRelative, Note, Profile
 from .silence import Guard, SilenceError, Silencer, TYPING_WARNING, refusal_message
+
+
+def _profile_from_mapping(mapping):
+    """A one-layer profile, every control global, from an old-style `Mapping`.
+
+    Temporary: `run` still reads mapping files until `runner-profile` switches it to
+    profiles. That stitch deletes this, `mapping.py` and `default_mapping.toml` (Bob,
+    2026-11-13: "we can hard break"; the profile itself no longer loads mappings).
+    """
+
+    def press(binding):
+        latch = "latch" if binding.mode == "toggle" else "momentary"
+        if isinstance(binding, NoteBinding):
+            return Note(note=binding.note, velocity=binding.velocity, mode=latch)
+        assert isinstance(binding, CcBinding)
+        return CcMomentary(cc=binding.cc, low=binding.off, high=binding.on, mode=latch)
+
+    def turn(binding):
+        if isinstance(binding, RelativeTurn):
+            return CcRelative(cc=binding.cc, encoding=binding.encoding)
+        assert isinstance(binding, AbsoluteTurn)
+        return CcAbsolute(cc=binding.cc, step=binding.step, initial=binding.initial)
+
+    controls = {f"key.{n}": press(b) for n, b in mapping.keys.items()}
+    controls.update({f"enc.{n}.push": press(b) for n, b in mapping.enc_push.items()})
+    controls.update({f"enc.{n}.turn": turn(b) for n, b in mapping.enc_turn.items()})
+    return Profile(
+        port=mapping.port,
+        channel=mapping.channel,
+        layer_count=1,
+        layer_names=("",),
+        controls=controls,
+    )
 
 
 class MidiPort:
@@ -59,8 +92,8 @@ def run(config=None, dry_run=False, out=None, err=None, allow_typing=False, sile
         print(TYPING_WARNING, file=err, flush=True)
 
     decoder = Decoder()
-    # Until runner-profile loads profiles directly: a legacy mapping as a one-layer profile.
-    engine = Engine(profile_from_mapping(mapping))
+    # Until runner-profile loads profiles directly: a mapping as a one-layer profile.
+    engine = Engine(_profile_from_mapping(mapping))
     port = DryRunPort(out) if dry_run else MidiPort(mapping.port)
 
     def say(text):

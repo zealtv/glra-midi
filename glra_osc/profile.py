@@ -26,8 +26,8 @@ helpers can leave a profile with problems, such as a layer key that points past 
 last layer after a layer is removed) and returns every problem. `dump_profile` writes a
 file that parses back to an equal profile.
 
-A file without `version` is a legacy mapping: `mapping.py` reads it and
-`profile_from_mapping` converts it to a one-layer profile with every control global.
+A file without `version` is an error: old mapping files no longer load (Bob, 2026-11-13:
+"i don't care about todays mapping files, we can hard break").
 """
 
 import os
@@ -41,15 +41,6 @@ from pathlib import Path
 from typing import ClassVar
 
 import tomli_w
-
-from .mapping import (
-    AbsoluteTurn,
-    CcBinding,
-    MappingError,
-    NoteBinding,
-    RelativeTurn,
-    parse_mapping,
-)
 
 PROFILE_VERSION = 1
 # Application Support directory name. One constant, so the glra-midi rename touches one
@@ -505,6 +496,11 @@ def _numbered(table, count, path):
 
 
 def _build(data):
+    if "version" not in data:
+        raise ProfileError(
+            f"version: required; a profile starts with `version = {PROFILE_VERSION}` "
+            "(old mapping files no longer load)"
+        )
     _check_keys(data, ("version", "midi", "pad", "layers", "lighting", "key", "enc"), "")
     version = data["version"]
     if version != PROFILE_VERSION or isinstance(version, bool):
@@ -532,16 +528,11 @@ def _build(data):
 
 
 def parse_profile(text, source="<profile>"):
-    """Validate profile text (or a legacy mapping file, converted) into a `Profile`."""
+    """Validate profile text into a `Profile`."""
     try:
         data = tomllib.loads(text)
     except tomllib.TOMLDecodeError as err:
         raise ProfileError(f"{source}: not valid TOML: {err}") from err
-    if "version" not in data:
-        try:
-            return profile_from_mapping(parse_mapping(text, source=source))
-        except MappingError as err:
-            raise ProfileError(str(err)) from None
     try:
         return _build(data)
     except ProfileError as err:
@@ -549,7 +540,7 @@ def parse_profile(text, source="<profile>"):
 
 
 def load_profile(path=None):
-    """Load and validate a profile (or legacy mapping) file; with no path, the shipped default."""
+    """Load and validate a profile file; with no path, the shipped default."""
     path = default_profile_path() if path is None else Path(path)
     try:
         text = path.read_text(encoding="utf-8")
@@ -558,57 +549,9 @@ def load_profile(path=None):
     return parse_profile(text, source=str(path))
 
 
-def is_legacy_mapping(text):
-    """True when `text` is valid TOML without `version`: an old mapping file (section 2.6)."""
-    try:
-        return "version" not in tomllib.loads(text)
-    except tomllib.TOMLDecodeError:
-        return False
-
-
 def _in_canonical_order(controls):
     rank = {name: i for i, name in enumerate(CONTROL_NAMES)}
     return dict(sorted(controls.items(), key=lambda item: rank.get(item[0], len(rank))))
-
-
-# --- legacy mapping (design 2.6) ----------------------------------------------------------
-
-
-def profile_from_mapping(mapping):
-    """A one-layer profile, every control global, from a legacy `Mapping`."""
-
-    def press(binding):
-        if isinstance(binding, NoteBinding):
-            return Note(
-                note=binding.note,
-                velocity=binding.velocity,
-                mode="latch" if binding.mode == "toggle" else "momentary",
-            )
-        assert isinstance(binding, CcBinding)
-        return CcMomentary(
-            cc=binding.cc,
-            low=binding.off,
-            high=binding.on,
-            mode="latch" if binding.mode == "toggle" else "momentary",
-        )
-
-    def turn(binding):
-        if isinstance(binding, RelativeTurn):
-            return CcRelative(cc=binding.cc, encoding=binding.encoding)
-        assert isinstance(binding, AbsoluteTurn)
-        # The old default start (64) was always explicit in a Mapping; keep it.
-        return CcAbsolute(cc=binding.cc, step=binding.step, initial=binding.initial)
-
-    controls = {f"key.{n}": press(b) for n, b in mapping.keys.items()}
-    controls.update({f"enc.{n}.push": press(b) for n, b in mapping.enc_push.items()})
-    controls.update({f"enc.{n}.turn": turn(b) for n, b in mapping.enc_turn.items()})
-    return Profile(
-        port=mapping.port,
-        channel=mapping.channel,
-        layer_count=1,
-        layer_names=("",),
-        controls=_in_canonical_order(controls),
-    )
 
 
 # --- validation of a profile built in code ------------------------------------------------
