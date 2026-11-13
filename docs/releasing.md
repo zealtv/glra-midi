@@ -1,7 +1,7 @@
 # Releasing glra-midi
 
 How a version gets numbered and a release gets cut. Written by the `release-process` worker on
-2026-11-13 from Bob's answers of the same day (`.loom/threads/public-release/instructions.md`):
+2026-11-13 from Bob's answers of the same day (`.loom/tied/public-release/instructions.md`):
 GitHub releases only for now, no PyPI; the first release is 0.1.0; SemVer.
 
 ## Who decides

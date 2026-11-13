@@ -47,7 +47,7 @@ Probed on Bob's pad (36ae:2475, firmware 103) on 2026-11-13 with Bob watching:
   modes 1, 2, 4–7, 11. All verified by eye except direction. Each change is a
   persisted write: set rarely, never modulate live.
 - **Firmware 103 normalises a stored payload** (two captures from Bob's config-app
-  tour, 2026-11-13, `.loom/threads/patch-0.1.1/evidence/`, fixtures in
+  tour, 2026-11-13, `.loom/tied/patch-0.1.1/evidence/`, fixtures in
   `tests/fixtures/lighting_readback_captures.json`): with the colour flag **off** it
   resets h/s/v to `ff ff ff` (sent `…00 08 aa ff ff`, read `…00 08 ff ff ff`); with
   the flag **on** it sets **byte 7 from `08` to `ff`** (sent `…01 08 d7 ff ff`, read

@@ -5,12 +5,12 @@ later `config-app` stitch builds to this file; where a stitch's
 `instructions.md` disagrees, this file wins.
 
 Sources: Bob's brief (`lore:2026-11-13-config-app-brief`), the eight readings
-in `.loom/threads/config-app/instructions.md` (Bob accepted them on
+in `.loom/tied/config-app/instructions.md` (Bob accepted them on
 2026-11-13 and corrected reading 2: "\"global\" just means it is the same on
 all layers. no fall through mechanism"), `glean:k16n3-lighting`,
 `glean:k16n3-hid-interfaces` and `glra_midi/device/layout.json` as of
 2026-11-13, and the references in
-`.loom/threads/config-app/config-design.stitching/references.md`.
+`.loom/tied/config-app/config-design.tied/references.md`.
 
 Unless a line names Bob, each decision below is **Claude's default**. Defaults
 that Bob might well want differently are listed in that stitch's
@@ -884,7 +884,7 @@ So in dials-right, displayed key 1 = `key.13`, displayed key 4 = `key.1`.
 
 Bob answered all nine on 2026-11-13 (`lore:2026-11-13-config-design-answers`;
 his words, with the readings Claude took, in
-`.loom/threads/config-app/config-design.tied/questions.md`). Where each landed:
+`.loom/tied/config-app/config-design.tied/questions.md`). Where each landed:
 
 - **Q1** latch on CC momentary: stands. Old mapping files stop loading (2.6).
 - **Q2** separate `rise-ms` and `fall-ms`, one `curve` (2.3, 3.5, 3.6).

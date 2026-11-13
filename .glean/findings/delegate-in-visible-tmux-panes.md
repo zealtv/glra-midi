@@ -14,7 +14,7 @@ The source of truth is qtable's `.glean/findings/one-worktree-one-cache-one-pane
 - Usage: read `~/repos/ai-kit/tools/claude-usage`; ask Bob for this session's floors. qtable's are per-run, not standing.
 
 ## Unattended queue runs (2026-11-13)
-Bob, 2026-11-13: "flesh the loom out so that an opus agent can work through it autonomously, acting as an orchestrator (workflow example in the qtable repo peer to this repo)". The runbook written for that sits at `.loom/threads/config-app/orchestrator.md`: the queue bounds the run (qtable's `work-the-queue-as-a-bounded-release.md`), new stitches go on the queue, questions for Bob get written down and parked, and the run stops at the tour. No pad writes while unattended.
+Bob, 2026-11-13: "flesh the loom out so that an opus agent can work through it autonomously, acting as an orchestrator (workflow example in the qtable repo peer to this repo)". The runbook written for that sits at `.loom/tied/config-app/orchestrator.md`: the queue bounds the run (qtable's `work-the-queue-as-a-bounded-release.md`), new stitches go on the queue, questions for Bob get written down and parked, and the run stops at the tour. No pad writes while unattended.
 
 ## The first config-app run (2026-11-13)
 Bob: "don't go over 92% of the 5 hourly usage window. pause cleanly if you need to ... ping me on tengu ... commit after each stitch." One Opus manager ran 14 stitches (12 planned, a fix stitch from Bob's design answers, two from the review) with Sonnet workers (Opus for design and review), up to three at once.
