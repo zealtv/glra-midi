@@ -19,3 +19,9 @@ Orchestrator note (2026-11-13, landing `lighting-modes`): `lighting.apply`
 widens the vendored `device/lighting.py` firmware and PID allowlists for the
 length of one write, under a lock, rather than editing vendored code (see
 `lighting-modes.tied/report.md`). Judge whether that is the right shape.
+
+Orchestrator notes (2026-11-13, landing `app-inspector`, from its captures):
+CC momentary tile summaries truncate ("CC20 10↔1…" in
+`inspector-cc-momentary.png`), and the note-name hint beside the Note field
+read "C1" while the field held an invalid 300 (`inspector-invalid.png`).
+Also see the worker's "apply as you type" reading in its report.
