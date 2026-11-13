@@ -244,20 +244,103 @@ def _firmware_103_gate():
             _studio.MODES.update(saved)
 
 
+class WriteNotConfirmed(RuntimeError):
+    """The `06 0b` went out, but the vendored write could not confirm it.
+
+    Not the same as a refusal: the pad was written, and the pad may now hold what was asked or
+    something else. `before`, `expected` and `after` are 11-byte hex strings (`after` is None when
+    the pad could not be read again); `backup` is the vendored backup path; `detail` is the
+    vendored reason (for example a readback that differed). Nothing here says later writes are
+    paused: the app and `lights` stay free to try again, and the user decides.
+    """
+
+    def __init__(self, before, expected, after, backup, detail, after_error=""):
+        self.before, self.expected, self.after = before, expected, after
+        self.backup, self.detail, self.after_error = backup, detail, after_error
+        shown = after if after is not None else f"unreadable ({after_error})"
+        text = (
+            "Written to the pad, but it did not read back as expected. "
+            f"Before {before}, expected {expected}, after {shown}."
+        )
+        if backup:
+            text += f" Backup: {backup}."
+        if detail:
+            text += f" ({detail})"
+        super().__init__(text)
+
+
+class _SentFlag:
+    """A reader that notes when its device's `write` has been called and returned.
+
+    Wraps only the attributes `device.lighting.write` uses and passes everything else through, so
+    `apply` can tell "refused before anything was sent" from "sent, then not confirmed".
+    """
+
+    def __init__(self, reader):
+        self._reader = reader
+        self.sent = False
+
+    @property
+    def device(self):
+        return _SentDevice(self._reader.device, self)
+
+    def __getattr__(self, name):
+        return getattr(self._reader, name)
+
+
+class _SentDevice:
+    def __init__(self, device, flag):
+        self._device, self._flag = device, flag
+
+    def write(self, packet):
+        result = self._device.write(packet)
+        self._flag.sent = True
+        return result
+
+    def __getattr__(self, name):
+        return getattr(self._device, name)
+
+
+_BACKUP_LINE = "Lighting backup: "
+_PAUSED = " Further writes are paused."
+
+
+def _split_vendored_error(text):
+    """`(reason, backup path)` from the vendored `RuntimeError` text."""
+    reason, _, backup = text.partition("\n" + _BACKUP_LINE)
+    return reason.replace(_PAUSED, "").strip(), backup.strip()
+
+
 def apply(reader, identity, lighting, directory):
     """Lay `lighting` over what the pad holds and write it once, guarded; or write nothing.
 
     Returns the vendored result dict (`before`, `after`, `backup`, `verified`), plus `unchanged`
-    when the pad already held the payload (then nothing is written, not even a backup). Raises
-    on a mismatch or an unsupported state. Writes `06 0b` with 11 bytes only; never `06 14` or
-    `06 12`.
+    when the pad already held the payload (then nothing is written, not even a backup). Writes
+    `06 0b` with 11 bytes only; never `06 14` or `06 12`.
+
+    Raises `WriteNotConfirmed` when the write went out and its check then failed (before /
+    expected / after and the backup path are on it); any other error means nothing was sent.
     """
     before = read_payload(reader)
     new = build(before, lighting)
     if new == before:
         return {"before": before.hex(), "after": before.hex(), "unchanged": True}
+    watched = _SentFlag(reader)
     with _firmware_103_gate():
-        return _studio.write(reader, identity, new, before.hex(), directory)
+        try:
+            return _studio.write(watched, identity, new, before.hex(), directory)
+        except RuntimeError as exc:
+            if not watched.sent:
+                raise
+            detail, backup = _split_vendored_error(str(exc))
+            after = after_error = None
+            try:
+                after = read_payload(reader).hex()
+            except (LightingError, ValueError, RuntimeError, OSError, TimeoutError) as err:
+                after_error = str(err)
+            raise WriteNotConfirmed(
+                before.hex(), new.hex(), after, backup, detail, after_error or ""
+            ) from exc
 
 
 # --- the pad, for the command line (and later the app) -------------------------------------

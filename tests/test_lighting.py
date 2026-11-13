@@ -248,11 +248,91 @@ class ApplyTests(unittest.TestCase):
             pad = FakePad(folder)
             pad.directory = Path(folder) / "backups"
             pad.stored = bytes.fromhex("0100010101010008ffffff")  # the pad kept something else
-            with self.assertRaises(RuntimeError) as ctx:
+            with self.assertRaises(lighting.WriteNotConfirmed) as ctx:
                 self.apply(pad, Lighting(mode=3, brightness=2, speed=2), folder)
-            self.assertIn("readback did not match", str(ctx.exception))
             self.assertEqual(len(pad.packets), 1)  # one write, no retry
             self.assertTrue(list((Path(folder) / "backups").glob("*-lighting-error.json")))
+            err = ctx.exception
+            # before / expected / after, as hex, and the backup the vendored write made
+            self.assertEqual(err.before, STOCK.hex())
+            self.assertEqual(err.expected, build(STOCK, Lighting(mode=3, brightness=2, speed=2)).hex())
+            self.assertEqual(err.after, "0100010101010008ffffff")
+            self.assertTrue(Path(err.backup).is_file())
+            self.assertEqual(load(err.backup)["before"], STOCK.hex())
+            text = str(err)
+            self.assertIn("Written to the pad", text)
+            for hexed in (err.before, err.expected, err.after, err.backup):
+                self.assertIn(hexed, text)
+
+    def test_a_write_that_went_out_does_not_say_not_applied_or_paused(self):
+        with tempfile.TemporaryDirectory() as folder:
+            pad = FakePad(folder)
+            pad.directory = Path(folder) / "backups"
+            pad.stored = bytes.fromhex("0100010101010008ffffff")
+            with self.assertRaises(lighting.WriteNotConfirmed) as ctx:
+                self.apply(pad, Lighting(mode=3, brightness=2, speed=2), folder)
+            text = str(ctx.exception).lower()
+            self.assertNotIn("not applied", text)
+            self.assertNotIn("paused", text)
+            self.assertIn("readback did not match", text)  # the vendored reason stays
+
+    def test_a_failed_check_after_the_write_is_also_a_write_that_went_out(self):
+        with tempfile.TemporaryDirectory() as folder:
+            pad = FakePad(folder)
+            pad.directory = Path(folder) / "backups"
+            write = pad.write
+
+            def bad_ack(data):
+                n = write(data)
+                pad.ack = bytes(64)  # the pad answered, wrongly; the payload itself is right
+                return n
+
+            pad.write = bad_ack
+            with self.assertRaises(lighting.WriteNotConfirmed) as ctx:
+                self.apply(pad, Lighting(mode=3, brightness=2, speed=2), folder)
+            self.assertEqual(ctx.exception.after, ctx.exception.expected)
+            self.assertIn("acknowledgement", str(ctx.exception))
+
+    def test_a_pad_that_cannot_be_read_after_a_write_is_said_so(self):
+        with tempfile.TemporaryDirectory() as folder:
+            pad = FakePad(folder)
+            pad.directory = Path(folder) / "backups"
+            pad.stored = bytes.fromhex("0100010101010008ffffff")
+            real = lighting.read_payload
+            calls = []
+
+            def read_payload(reader):
+                calls.append(1)
+                if len(calls) > 1:  # the read after the failure
+                    raise OSError("pad went away")
+                return real(reader)
+
+            with mock.patch.object(lighting, "read_payload", read_payload):
+                with self.assertRaises(lighting.WriteNotConfirmed) as ctx:
+                    self.apply(pad, Lighting(mode=3, brightness=2, speed=2), folder)
+            self.assertIsNone(ctx.exception.after)
+            self.assertIn("unreadable (pad went away)", str(ctx.exception))
+
+    def test_nothing_sent_is_not_a_write_that_went_out(self):
+        # a refusal before the write, and a write call that itself fails, stay plain errors
+        with tempfile.TemporaryDirectory() as folder:
+            pad = FakePad(folder, firmware=104)
+            pad.directory = Path(folder) / "backups"
+            with self.assertRaises(ValueError) as ctx:
+                self.apply(pad, Lighting(mode=2, brightness=4, speed=2), folder)
+            self.assertNotIsInstance(ctx.exception, lighting.WriteNotConfirmed)
+        with tempfile.TemporaryDirectory() as folder:
+            pad = FakePad(folder)
+            pad.directory = Path(folder) / "backups"
+
+            def refuse(data):
+                raise OSError("write failed")
+
+            pad.write = refuse
+            with self.assertRaises(RuntimeError) as ctx:
+                self.apply(pad, Lighting(mode=3, brightness=2, speed=2), folder)
+            self.assertNotIsInstance(ctx.exception, lighting.WriteNotConfirmed)
+            self.assertEqual(pad.packets, [])
 
     def test_out_of_range_lighting_never_reaches_the_pad(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -382,7 +462,9 @@ class CommandTests(unittest.TestCase):
         self.pad.stored = bytes.fromhex("0100010101010008ffffff")
         code, out, err, asked = self.run_command(profile_path=path, apply_changes=True)
         self.assertEqual(code, 1)
+        self.assertIn("Written to the pad", err)
         self.assertIn("readback did not match", err)
+        self.assertNotIn("paused", err)
 
     def test_the_cli_routes_lights(self):
         from glra_osc import cli
