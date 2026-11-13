@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = "GPL-3.0-only"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
-dependencies = ["hidapi==0.15.0", "rtmidi2>=1.5.0"]
+dependencies = ["hidapi==0.15.0", "rtmidi2>=1.5.0", "tomli-w==1.2.0"]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "Operating System :: MacOS :: MacOS X",

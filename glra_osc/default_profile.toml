@@ -1,0 +1,334 @@
+# glra-osc default profile: the file to copy and edit (the app writes the same format).
+# Design: docs/config-app.md section 2.
+#
+# Control names are PHYSICAL and never change with the pad's orientation:
+#   key.1 .. key.16, enc.1.push .. enc.3.push, enc.1.turn .. enc.3.turn
+# (key 1 is top-left with the dials along the top). Leave a control out to do nothing.
+#
+# A control holds exactly ONE of these (mixing them is an error):
+#   [key.1]            kind = ... directly: the same event on every layer ("global"),
+#                      or a layer key (layer-set / layer-inc / layer-dec, global by construction)
+#   [key.1.layers.2]   a table per layer, 1..count: different events per layer; a layer
+#                      without a table does nothing. No fall-through to a global event.
+#
+# Every event takes an optional channel = 1..16 (default: [midi] channel). Fields, with defaults:
+#   Presses (keys and dial pushes):
+#     kind = "note"          note 0..127, velocity 1..127 (127), mode "momentary"|"latch" ("momentary")
+#     kind = "cc-momentary"  cc, low (0), high (127), ease-ms 0..10000 (0), curve (linear),
+#                            mode "momentary"|"latch" ("momentary")
+#     kind = "cc-set"        cc, value 0..127
+#     kind = "cc-step"       cc, step -127..127 but not 0 (negative = dec), ease-ms (0), curve (linear)
+#     kind = "layer-set"     layer 1..count        (global; goes to that layer)
+#     kind = "layer-inc"     (global; next layer, wraps)
+#     kind = "layer-dec"     (global; previous layer, wraps)
+#   Dial turns (enc.N.turn; a turn takes the global or per-layer shape, never a layer key):
+#     kind = "cc-relative"   cc, encoding "twos-complement" (default) | "binary-offset" | "signed-bit"
+#     kind = "cc-absolute"   cc, step 1..127 (1), initial 0..127 (optional: the start value
+#                            of that channel+cc; two dials may not give different ones)
+#   curve = "linear" | "ease-in" | "ease-out" | "ease-in-out"; ease-ms = 0 jumps.
+#
+# Optional sections (their defaults shown):
+#   [pad]      orientation = "dials-top"   # | dials-right | dials-bottom | dials-left
+#   [lighting] mode = 0..12, brightness = 0..4 (4), speed = 0..4 (2),
+#              color = [hue, sat, value] (0..255, only for modes that take one colour)
+#              Without [lighting] the app leaves the pad's lighting alone. Every lighting
+#              write is saved in the pad's memory, so only the app's Apply button sends it.
+#
+# Saving from the app rewrites this file in a fixed order and drops the comments.
+
+version = 1
+
+[midi]
+port = "GLRA K16"
+channel = 1            # 1..16
+
+[pad]
+orientation = "dials-top"
+
+[layers]
+count = 4              # 1..8
+# names = ["Drums", "Synth", "", "Mixer"]   # optional; "" is unnamed
+
+# Keys: notes 36..51 on layer 1, 52..67 on layer 2, 68..83 on layer 3, 84..99 on layer 4.
+
+[key.1.layers.1]
+kind = "note"
+note = 36
+
+[key.1.layers.2]
+kind = "note"
+note = 52
+
+[key.1.layers.3]
+kind = "note"
+note = 68
+
+[key.1.layers.4]
+kind = "note"
+note = 84
+
+[key.2.layers.1]
+kind = "note"
+note = 37
+
+[key.2.layers.2]
+kind = "note"
+note = 53
+
+[key.2.layers.3]
+kind = "note"
+note = 69
+
+[key.2.layers.4]
+kind = "note"
+note = 85
+
+[key.3.layers.1]
+kind = "note"
+note = 38
+
+[key.3.layers.2]
+kind = "note"
+note = 54
+
+[key.3.layers.3]
+kind = "note"
+note = 70
+
+[key.3.layers.4]
+kind = "note"
+note = 86
+
+[key.4.layers.1]
+kind = "note"
+note = 39
+
+[key.4.layers.2]
+kind = "note"
+note = 55
+
+[key.4.layers.3]
+kind = "note"
+note = 71
+
+[key.4.layers.4]
+kind = "note"
+note = 87
+
+[key.5.layers.1]
+kind = "note"
+note = 40
+
+[key.5.layers.2]
+kind = "note"
+note = 56
+
+[key.5.layers.3]
+kind = "note"
+note = 72
+
+[key.5.layers.4]
+kind = "note"
+note = 88
+
+[key.6.layers.1]
+kind = "note"
+note = 41
+
+[key.6.layers.2]
+kind = "note"
+note = 57
+
+[key.6.layers.3]
+kind = "note"
+note = 73
+
+[key.6.layers.4]
+kind = "note"
+note = 89
+
+[key.7.layers.1]
+kind = "note"
+note = 42
+
+[key.7.layers.2]
+kind = "note"
+note = 58
+
+[key.7.layers.3]
+kind = "note"
+note = 74
+
+[key.7.layers.4]
+kind = "note"
+note = 90
+
+[key.8.layers.1]
+kind = "note"
+note = 43
+
+[key.8.layers.2]
+kind = "note"
+note = 59
+
+[key.8.layers.3]
+kind = "note"
+note = 75
+
+[key.8.layers.4]
+kind = "note"
+note = 91
+
+[key.9.layers.1]
+kind = "note"
+note = 44
+
+[key.9.layers.2]
+kind = "note"
+note = 60
+
+[key.9.layers.3]
+kind = "note"
+note = 76
+
+[key.9.layers.4]
+kind = "note"
+note = 92
+
+[key.10.layers.1]
+kind = "note"
+note = 45
+
+[key.10.layers.2]
+kind = "note"
+note = 61
+
+[key.10.layers.3]
+kind = "note"
+note = 77
+
+[key.10.layers.4]
+kind = "note"
+note = 93
+
+[key.11.layers.1]
+kind = "note"
+note = 46
+
+[key.11.layers.2]
+kind = "note"
+note = 62
+
+[key.11.layers.3]
+kind = "note"
+note = 78
+
+[key.11.layers.4]
+kind = "note"
+note = 94
+
+[key.12.layers.1]
+kind = "note"
+note = 47
+
+[key.12.layers.2]
+kind = "note"
+note = 63
+
+[key.12.layers.3]
+kind = "note"
+note = 79
+
+[key.12.layers.4]
+kind = "note"
+note = 95
+
+[key.13.layers.1]
+kind = "note"
+note = 48
+
+[key.13.layers.2]
+kind = "note"
+note = 64
+
+[key.13.layers.3]
+kind = "note"
+note = 80
+
+[key.13.layers.4]
+kind = "note"
+note = 96
+
+[key.14.layers.1]
+kind = "note"
+note = 49
+
+[key.14.layers.2]
+kind = "note"
+note = 65
+
+[key.14.layers.3]
+kind = "note"
+note = 81
+
+[key.14.layers.4]
+kind = "note"
+note = 97
+
+[key.15.layers.1]
+kind = "note"
+note = 50
+
+[key.15.layers.2]
+kind = "note"
+note = 66
+
+[key.15.layers.3]
+kind = "note"
+note = 82
+
+[key.15.layers.4]
+kind = "note"
+note = 98
+
+[key.16.layers.1]
+kind = "note"
+note = 51
+
+[key.16.layers.2]
+kind = "note"
+note = 67
+
+[key.16.layers.3]
+kind = "note"
+note = 83
+
+[key.16.layers.4]
+kind = "note"
+note = 99
+
+# Dial pushes are layer keys, the same on every layer: previous / layer 1 / next.
+
+[enc.1.push]
+kind = "layer-dec"
+
+[enc.2.push]
+kind = "layer-set"
+layer = 1
+
+[enc.3.push]
+kind = "layer-inc"
+
+# Dial turns: relative CC 16..18 on every layer.
+
+[enc.1.turn]
+kind = "cc-relative"
+cc = 16
+
+[enc.2.turn]
+kind = "cc-relative"
+cc = 17
+
+[enc.3.turn]
+kind = "cc-relative"
+cc = 18
