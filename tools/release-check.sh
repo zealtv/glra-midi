@@ -81,7 +81,7 @@ step "4. build wheel and sdist from HEAD"
 mkdir "$tmp/src"
 git archive HEAD | tar -x -C "$tmp/src"
 "$PYTHON" -m venv "$tmp/buildenv"
-"$tmp/buildenv/bin/pip" install --quiet build
+"$tmp/buildenv/bin/pip" install --quiet --disable-pip-version-check build
 (cd "$tmp/src" && "$tmp/buildenv/bin/python" -m build --outdir "$tmp/dist" > "$tmp/build.log" 2>&1) \
     || { tail -30 "$tmp/build.log"; fail "python -m build failed"; }
 wheel="$tmp/dist/glra_midi-$version-py3-none-any.whl"
@@ -116,7 +116,7 @@ echo "LICENSE, THIRD_PARTY_NOTICES.md and package data present"
 
 step "6. fresh install"
 "$PYTHON" -m venv "$tmp/fresh"
-"$tmp/fresh/bin/pip" install --quiet "$wheel"
+"$tmp/fresh/bin/pip" install --quiet --disable-pip-version-check "$wheel"
 got=$("$tmp/fresh/bin/glra-midi" --version)
 [ "$got" = "glra-midi $version" ] || fail "glra-midi --version printed '$got'"
 echo "$got"
