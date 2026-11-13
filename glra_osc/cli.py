@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
-"""Command line entry point: `--version`, `monitor`, `run` and `unsilence`."""
+"""Command line entry point: `--version`, `monitor`, `run`, `lights` and `unsilence`."""
 
 import argparse
 import sys
@@ -22,6 +22,17 @@ def main(argv=None):
         "--dry-run", action="store_true", help="print the MIDI instead of sending it"
     )
     run_p.add_argument("--allow-typing", action="store_true", help=typing_help)
+    lights = sub.add_parser(
+        "lights",
+        help="show the pad's factory RGB mode; with --apply, write the profile's [lighting]",
+    )
+    lights.add_argument("--profile", metavar="FILE", help="profile file (default: the user's)")
+    lights.add_argument(
+        "--apply",
+        action="store_true",
+        help="write the profile's [lighting] to the pad after showing the change and asking "
+        "(each write is saved in the pad's flash)",
+    )
     sub.add_parser(
         "unsilence",
         help="remove glra-osc's key-mapping entries from the pad (after a crash or kill -9)",
@@ -40,6 +51,10 @@ def main(argv=None):
         except MappingError as err:
             print(f"glra-osc: {err}", file=sys.stderr)
             return 2
+    if args.command == "lights":
+        from .lighting import lights_command
+
+        return lights_command(profile_path=args.profile, apply_changes=args.apply)
     if args.command == "unsilence":
         from .decode import load_layout
         from .silence import SilenceError, Silencer
