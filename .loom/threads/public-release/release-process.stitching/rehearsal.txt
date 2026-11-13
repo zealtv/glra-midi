@@ -1,0 +1,28 @@
+# release-check rehearsal, 2026-11-13 (throwaway clone, version bumped to 0.1.0 there only)
+
+$ tools/release-check.sh --allow-any-branch 0.1.0
+
+== 1. clean tree on main, tag free
+REHEARSAL: on 'release-process', not checking for main (a real release runs without the flag)
+
+== 2. ./test.sh
+tests pass
+
+== 3. version and changelog
+version 0.1.0, changelog section found
+
+== 4. build wheel and sdist from HEAD
+built glra_midi-0.1.0-py3-none-any.whl and glra_midi-0.1.0.tar.gz
+
+== 5. contents
+LICENSE, THIRD_PARTY_NOTICES.md and package data present
+
+== 6. fresh install
+glra-midi 0.1.0
+
+== OK: 0.1.0 can be released
+files for the GitHub release (git-ignored):
+dist/glra_midi-0.1.0-py3-none-any.whl
+dist/glra_midi-0.1.0.tar.gz
+This was a rehearsal; the real check runs on main without --allow-any-branch.
+Nothing was tagged or pushed.
