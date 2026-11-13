@@ -19,6 +19,29 @@ Candidate approaches to study, cheapest-risk first:
 4. **Replacement controller PCB** in the same case (RP2040/STM32 + QMK/Vial).
 Each: risk, reversibility, cost, effort, what it gives `midi-feedback`/`banks`.
 
+## Leading candidate: ZXW / Masses Chip `M9F9520` (2026-11-13)
+
+From another agent's report, which Bob pasted on 2026-11-13
+(`lore:2026-11-13-mcu-chip-lead-m9f9520`, with Claude's spot checks). Unconfirmed.
+- ZXW Microchip (深圳市卓芯微半导体有限公司) lists `M9F9520` at
+  `zxw-chip.com/article/7` (Claude reproduced this on 2026-11-13): 32K ROM, 2216
+  RAM, full-speed USB, 44 IO, WS2812 output, LQFP48/QFN48. Siblings on the same
+  page: `M9F951` and `M9F9800`. The vendor updater's `mcu_type` names `951` and
+  `9520` match two of them.
+- The report names Masses Chip (合肥磐芯电子有限公司, `masses-chip.com`) as the
+  designer. It says Masses Chip offers ZC-Writer / ZC-LINK tools, publishes
+  M9F951 code protection and ISP/IAP, and has a CNIPA layout registration; it
+  also reports `5566:0008` "ZXWMicroChip" / `ZXWM9F9800` USB strings. Claude
+  didn't reproduce any of these (the site's TLS certificate had expired; the
+  searches found nothing).
+- Next tests: an `M9F9520` (or `M9F951`) datasheet's instruction table against
+  the `df LL f0 HH` reset jump; the `M9F9520` pinout against an **unpowered**
+  continuity trace of `J1` to `U1`'s pins; ask the vendor whether a
+  ZC-Writer can read back a protected part. Still never connect anything to
+  `J1` until Bob okays that specific step.
+- Search terms: `M9F9520`, `M9F951`, `M9F9800`, `ZC-Writer`, `ZC-LINK`,
+  "磐芯 单片机", "卓芯微 M9F", "M9F951 数据手册".
+
 ## Chip-identification search terms (manager's list for Bob, 2026-11-13)
 
 Not yet searched as of 2026-11-13, except that `firmware-feasibility` and
