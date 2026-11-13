@@ -1,0 +1,31 @@
+# Excerpt of macOS crash report Python-2026-11-13-184200.ips (Bob's Mac, quitting the config app).
+# Trimmed by Claude, 2026-11-13: only the exception and the crashing thread's stack; machine IDs removed.
+app: Python 3.14.7 | os: macOS 14.6.1 (23G93)
+exception: EXC_BREAKPOINT SIGTRAP | Trace/BPT trap: 5
+crashed thread 0 (com.apple.main-thread):
+   0 CoreFoundation                           __CFCheckCFInfoPACSignature
+   1 CoreFoundation                           CFRunLoopRemoveSource
+   2 IOKit                                    IOHIDDeviceUnscheduleFromRunLoop
+   3 IOKit                                    __IOHIDManagerDeviceApplier
+   4 CoreFoundation                           __CFSetApplyFunction_block_invoke
+   5 CoreFoundation                           CFBasicHashApply
+   6 CoreFoundation                           CFSetApplyFunction
+   7 IOKit                                    __ApplyToDevices
+   8 IOKit                                    IOHIDManagerUnscheduleFromRunLoop
+   9 IOKit                                    IOHIDManagerClose
+  10 hid.cpython-314-darwin.so                hid_exit
+  11 hid.cpython-314-darwin.so                __pyx_pw_11cfunc_dot_to_py_52__Pyx_CFunc_4chid_int__lParen__rParennoexcept_to_py__1wrap
+  12 Python                                   _PyEval_EvalFrameDefault
+  13 Python                                   _PyEval_Vector
+  14 Python                                   _PyObject_VectorcallDictTstate
+  15 Python                                   call_method
+  16 Python                                   _PyObject_MakeTpCall
+  17 Python                                   _PyEval_EvalFrameDefault
+  18 Python                                   _PyEval_Vector
+  19 Python                                   _PyObject_VectorcallPrepend
+  20 Python                                   atexit_callfuncs
+  21 Python                                   _Py_Finalize
+  22 Python                                   Py_RunMain
+  23 Python                                   pymain_main
+  24 Python                                   Py_BytesMain
+  25 dyld                                     start

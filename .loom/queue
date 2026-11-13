@@ -5,3 +5,7 @@ release-process
 publication-audit
 rename-places
 first-release
+fix-lighting-readback
+fix-quit-crash
+layer-removal-renumber
+app-review-polish
