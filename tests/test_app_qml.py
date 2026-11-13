@@ -3,7 +3,7 @@
 import unittest
 
 from . import qt_support  # noqa: F401 - skips this module without PySide6, sets up Qt
-from .qt_support import make_home
+from .qt_support import forbid_real_device, make_home
 
 from PySide6.QtCore import QCoreApplication, QEvent, QMetaObject, QObject, QPointF, Qt, QUrl
 from PySide6.QtQml import QQmlApplicationEngine
@@ -11,16 +11,18 @@ from PySide6.QtQuick import QQuickWindow
 from PySide6.QtTest import QTest
 
 from glra_osc import profile as prof
+from glra_osc.app import device as pads
 from glra_osc.app import gui
 from glra_osc.app.controller import Controller
 
 
 class QmlCase(unittest.TestCase):
     def setUp(self):
+        forbid_real_device(self)  # the QML tests run on no pad or a FakePad, never the real one
         self.home = make_home(self)
 
-    def load(self, scheme="system", home=None):
-        self.controller = Controller(home=home or self.home, scheme=scheme)
+    def load(self, scheme="system", home=None, pad=None):
+        self.controller = Controller(home=home or self.home, scheme=scheme, pad=pad, cooldown_ms=0)
         self.engine = QQmlApplicationEngine()
         self.warnings = []
         self.engine.warnings.connect(lambda items: self.warnings.extend(str(i) for i in items))
@@ -31,6 +33,7 @@ class QmlCase(unittest.TestCase):
         self.window.setProperty("quitOk", True)
         self.addCleanup(self.tear_down, self.engine, self.controller)
         QTest.qWait(50)
+        self.controller.wait_for_pad()
         return self.window
 
     @staticmethod
@@ -267,6 +270,157 @@ class InspectorTests(QmlCase):
         self.assertEqual(self.controller.profile.controls["key.9"].get(1).mode, "latch")
         self.click("field-mode")
         self.assertEqual(self.controller.profile.controls["key.9"].get(1).mode, "momentary")
+
+
+class DevicePanelTests(QmlCase):
+    """The device panel in the real window, on a FakePad."""
+
+    def open_panel(self, pad=None, **kw):
+        self.pad = pads.FakePad() if pad is None else pad
+        self.load(pad=self.pad, **kw)
+        self.window.setProperty("deviceOpen", True)
+        self.settle()
+
+    def test_loads_collapsed_then_a_click_on_the_strip_opens_it(self):
+        self.load(pad=pads.FakePad())
+        self.assertFalse(self.find("devicePanel").property("visible"))
+        self.click("deviceStripArea")
+        self.assertTrue(self.find("devicePanel").property("visible"))
+        self.click("deviceStripArea")
+        self.assertFalse(self.find("devicePanel").property("visible"))
+        self.assertEqual(self.warnings, [])
+
+    def test_every_state_binds_cleanly_in_light_and_dark(self):
+        for scheme in ("light", "dark"):
+            with self.subTest(scheme=scheme):
+                self.open_panel(scheme=scheme)
+                c = self.controller
+                for mode in (-1, 0, 1, 2, 3, 12, 6):
+                    c.setLightingMode(mode)
+                    self.settle(5)
+                c.setPort("")
+                self.pad.connected = False
+                c.refreshPad()
+                c.wait_for_pad()
+                self.pad.error = ValueError("readback")
+                self.pad.connected = True
+                c.refreshPad()
+                c.wait_for_pad()
+                c.applyLighting()
+                c.wait_for_pad()
+                self.settle()
+                self.assertEqual(self.warnings, [])
+
+    def test_the_toolbar_names_the_pad(self):
+        self.open_panel()
+        self.assertEqual(self.find("padHeadline").property("text"), "Pad: connected (103)")
+        self.open_panel(pads.FakePad(connected=False))
+        self.assertEqual(self.find("padHeadline").property("text"), "Pad: not found")
+
+    def test_clicking_apply_calls_the_pad_once(self):
+        self.open_panel()
+        self.assertEqual(self.pad.apply_calls, [])
+        self.click("applyButton")
+        self.controller.wait_for_pad()
+        self.assertEqual(len(self.pad.apply_calls), 1)
+        self.assertEqual(len(self.pad.writes), 1)
+        self.settle()
+        self.assertEqual(self.find("applyLast").property("text"), "Applied and read back.")
+        self.click("applyButton")  # nothing changed: the pad says so and writes nothing
+        self.controller.wait_for_pad()
+        self.assertEqual(len(self.pad.apply_calls), 2)
+        self.assertEqual(len(self.pad.writes), 1)
+        self.settle()
+        self.assertEqual(self.find("applyLast").property("text"), "Already set.")
+
+    def test_opening_the_panel_and_editing_every_field_never_calls_apply(self):
+        self.open_panel()
+        c = self.controller
+        for name in (
+            "seg-orientation-dials-left",
+            "seg-orientation-dials-bottom",
+        ):
+            self.click(name)
+        self.click("light-color-on")
+        self.click("light-color-on")
+        self.click("refreshPadButton")
+        c.wait_for_pad()
+        c.saveProfile()
+        self.assertEqual(self.pad.apply_calls, [])
+        self.assertEqual(self.pad.writes, [])
+
+    def test_apply_is_disabled_with_no_pad_and_a_click_does_nothing(self):
+        self.open_panel(pads.FakePad(connected=False))
+        self.assertFalse(self.find("applyButton").property("enabled"))
+        self.click("applyButton")
+        self.controller.wait_for_pad()
+        self.assertEqual(self.pad.apply_calls, [])
+        self.assertIn("not found", self.find("padNow").property("text"))
+
+    def test_apply_is_disabled_with_no_lighting_in_the_profile(self):
+        self.open_panel()
+        self.controller.setLightingMode(-1)
+        self.settle()
+        self.assertFalse(self.find("applyButton").property("enabled"))
+        self.assertTrue(self.find("lightNote").property("visible"))
+        self.click("applyButton")
+        self.assertEqual(self.pad.apply_calls, [])
+
+    def test_the_orientation_buttons_turn_the_pad(self):
+        self.open_panel()
+        for orientation in prof.ORIENTATIONS:
+            self.click("seg-orientation-" + orientation)
+            self.assertEqual(self.controller.profile.orientation, orientation)
+            self.assertEqual(self.controller.dialSide, orientation.removeprefix("dials-"))
+
+    def test_the_colour_switch_and_slider_edit_the_profile(self):
+        self.open_panel()
+        c = self.controller
+        self.click("light-color-on")  # on to off
+        self.assertIsNone(c.profile.lighting.color)
+        self.click("light-color-on")
+        self.assertEqual(c.profile.lighting.color, (0, 255, 255))
+        slider = self.find("slider-hue")
+        slider.forceActiveFocus()
+        for _ in range(3):
+            QTest.keyClick(self.window, Qt.Key_Right)
+        self.settle()
+        self.assertGreater(c.profile.lighting.color[0], 0)
+        self.assertEqual(self.pad.apply_calls, [])
+
+    def test_modes_that_read_nothing_hide_their_fields(self):
+        self.open_panel()
+        self.controller.setLightingMode(0)  # Off
+        self.settle()
+        self.assertFalse(self.find("brightnessRow").property("visible"))
+        self.assertFalse(self.find("speedRow").property("visible"))
+        self.assertFalse(self.find("colorRow").property("visible"))
+        self.controller.setLightingMode(2)
+        self.settle()
+        self.assertTrue(self.find("brightnessRow").property("visible"))
+        self.assertTrue(self.find("speedRow").property("visible"))
+        self.assertTrue(self.find("colorRow").property("visible"))
+
+    def test_typing_a_port_name_edits_the_profile(self):
+        self.open_panel()
+        field = self.find("field-port")
+        field.forceActiveFocus()
+        field.selectAll()
+        for char in "Net Pad":
+            QTest.keyClick(self.window, char)
+        self.settle()
+        self.assertEqual(self.controller.profile.port, "Net Pad")
+
+    def test_an_empty_port_shows_the_profiles_message_and_keeps_the_old_name(self):
+        self.open_panel()
+        field = self.find("field-port")
+        field.forceActiveFocus()
+        field.selectAll()
+        QTest.keyClick(self.window, Qt.Key_Backspace)
+        self.settle()
+        self.assertEqual(self.controller.profile.port, "GLRA K16")
+        self.assertIn("non-empty", self.find("error-port").property("text"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -461,7 +461,9 @@ glra_osc/app/
   gui.py           # QGuiApplication, QML engine, --demo, --capture
   controller.py    # Controller(QObject): profile, tab, selection, dirty, file ops
   summary.py       # pure: tile text for every kind (tested without Qt)
-  device.py        # pad reads and the one lighting Apply, in a worker thread; FakePad
+  device.py        # the pad interface: FakePad (demo, tests), RealPad (read, and the one Apply)
+  padworker.py     # one worker thread for pad calls (glra-studio's worker.py idea)
+  devicepanel.py   # pure: the panel's lighting edits and the dict the QML reads
   qml/
     Main.qml        # window: toolbar, layer tabs, pad view, inspector, device panel
     PadView.qml     # 16 keys + 3 dials placed by orientation.py
@@ -474,7 +476,8 @@ glra_osc/app/
 
 ### 4.3 Window
 
-One window, about 1000 × 640, resizable. Toolbar on top, layer tabs above the
+One window, about 1000 × 740 (640 until `app-device-panel` added the open panel; Claude,
+2026-11-13), resizable. Toolbar on top, layer tabs above the
 pad, inspector on the right, device panel as a collapsible strip at the
 bottom.
 
@@ -676,7 +679,7 @@ Collapsed it shows one line (see 4.3). Expanded:
 
 ```
 ├ Device ────────────────────────────────────────────────────────────────────┤
-│ Orientation (•) Dials top ( ) Dials right ( ) Dials bottom ( ) Dials left  │
+│ Dials on [Top] [Right] [Bottom] [Left]                                    │
 │ MIDI port [ GLRA K16        ]   Default channel [ 1 ▾ ]                   │
 │ Lighting  [ Breathing ▾ ] Brightness [ 4 ▾ ] Speed [ 2 ▾ ]                │
 │           [x] One colour  Hue ▭▭▭▭▭▭▭▭  Sat ▭▭▭▭  Value ▭▭▭▭              │
@@ -686,6 +689,11 @@ Collapsed it shows one line (see 4.3). Expanded:
 ```
 
 - Orientation redraws and renumbers the pad view at once (section 6).
+- As built (`app-device-panel`, Claude, 2026-11-13): the selector's first entry, "Leave as it
+  is", removes `[lighting]` (the way to have none); the colour row shows a switch and three
+  sliders (hue, saturation, value) only for modes that take one; a [Read pad] button reads again
+  (the app reads the pad at start and then only on that button and after an Apply, never on a
+  timer); the toolbar shows "Pad: connected (103)" or "Pad: not found".
 - The lighting fields edit the profile's `[lighting]` (section 5); only
   [Apply to pad] touches the pad.
 - "Pad now" comes from a read (`06 0a`). With no pad: "Pad: not found", the

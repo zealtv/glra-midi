@@ -12,12 +12,13 @@ RowLayout {
     property string fieldName
     property var choices: []
     property string value
+    property int labelWidth: 84
     signal picked(string value)
     spacing: 8
     Layout.fillWidth: true
 
     Text {
-        Layout.preferredWidth: 84
+        Layout.preferredWidth: c.labelWidth
         text: c.label
         font.pixelSize: 12
         color: c.pal.muted

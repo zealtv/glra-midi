@@ -3,6 +3,7 @@
 """The device panel: lighting, orientation, port and channel edit the profile; the one pad write
 happens only on Apply. Every test uses a FakePad; none reaches the real device."""
 
+import os
 import tempfile
 import threading
 import time
@@ -461,6 +462,56 @@ class ApplyTests(DeviceCase):
         self.c.applyLighting()
         self.c.wait_for_pad()
         self.assertEqual(self.pad.apply_calls, [])
+
+
+class CaptureSafetyTests(unittest.TestCase):
+    """`--demo` and `--capture` run on the FakePad; a capture must not reach for the device."""
+
+    def run_capture(self, state):
+        import subprocess
+        import sys
+
+        code = (
+            "import sys\n"
+            "from unittest import mock\n"
+            "def refuse(*a, **k): raise AssertionError('the real device was reached')\n"
+            "import glra_osc.lighting, glra_osc.device.backend as b\n"
+            "for target in ('enumerate_devices', 'select', 'open_device'):\n"
+            "    setattr(b, target, refuse)\n"
+            "glra_osc.lighting.connect = refuse\n"
+            "from glra_osc.app import gui\n"
+            "sys.exit(gui.main(sys.argv[1:]))\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "shot.png"
+            result = subprocess.run(
+                [sys.executable, "-I", "-c", code, "--capture", state, "--out", str(out)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(out.exists() and out.stat().st_size > 1000)
+
+    def test_a_capture_that_applies_runs_on_the_fake_pad(self):
+        self.run_capture("device-panel-applied")
+
+    def test_a_capture_with_no_pad_runs_without_io(self):
+        self.run_capture("device-panel-no-pad")
+
+    def test_make_pad_picks_the_fake_for_demo_and_the_real_one_only_otherwise(self):
+        from glra_osc.app import gui
+
+        forbid_real_device(self)
+        self.assertIsInstance(gui.make_pad(True), pads.FakePad)
+        self.assertIsInstance(gui.make_pad(False), pads.RealPad)  # built, not opened
+
+    def test_every_device_capture_state_is_listed(self):
+        from glra_osc.app import gui
+
+        names = [n for n in gui.STATES if n.startswith("device-")]
+        self.assertGreaterEqual(len(names), 10)
 
 
 class NoDeviceTests(unittest.TestCase):

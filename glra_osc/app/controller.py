@@ -315,7 +315,7 @@ class Controller(QObject):
         return {
             "orientation": profile.orientation,
             "orientations": [
-                {"value": o, "label": f"Dials {o.removeprefix('dials-')}"} for o in prof.ORIENTATIONS
+                {"value": o, "label": o.removeprefix("dials-").capitalize()} for o in prof.ORIENTATIONS
             ],
             "port": {"text": port, "error": port_error},
             "channel": profile.channel,

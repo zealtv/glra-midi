@@ -12,7 +12,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+from .. import lighting as lights
 from .. import profile as prof
+from . import device
 
 HERE = Path(__file__).parent
 QML = HERE / "qml" / "Main.qml"
@@ -94,6 +96,50 @@ def _then(*steps):
     return apply
 
 
+def _open_panel(window, controller):
+    controller.wait_for_pad()  # the start-up read on the fake pad has landed
+    window.setProperty("deviceOpen", True)
+
+
+def _panel(*steps, orientation=None):
+    """A capture state with the device panel open, after `steps` (each `(controller method,
+    *args)`). Every pad call here goes to the `FakePad` a capture always runs on."""
+
+    def apply(window, controller):
+        _open_panel(window, controller)
+        if orientation:
+            controller.setOrientation(orientation)
+        for name, *args in steps:
+            getattr(controller, name)(*args)
+
+    return apply
+
+
+def _no_pad(window, controller):
+    _open_panel(window, controller)
+    controller.pad.connected = False
+    controller.refreshPad()
+
+
+def _already_set(window, controller):
+    _open_panel(window, controller)
+    controller.pad.payload = lights.build(controller.pad.payload, controller.profile.lighting)
+    controller.refreshPad()
+    controller.wait_for_pad()
+    controller.applyLighting()
+
+
+def _readback_error(window, controller):
+    _open_panel(window, controller)
+    controller.pad.error = ValueError("Lighting readback did not match what was written.")
+    controller.applyLighting()
+
+
+def _bad_port(window, controller):
+    _open_panel(window, controller)
+    controller.setPort("")
+
+
 def _bad_note(window, controller):
     controller.selectTab(1)
     controller.selectControl("key.1")
@@ -127,6 +173,21 @@ STATES = {
     "inspector-make-global": _then(
         ("selectTab", 1), ("selectControl", "key.2"), ("setApplies", "global")
     ),
+    "device-panel": _panel(),
+    "device-panel-collapsed": _select(),
+    "device-panel-spectrum": _panel(("setLightingMode", 3)),
+    "device-panel-steady": _panel(("setLightingMode", 1), ("setLightingColor", False)),
+    "device-panel-off": _panel(("setLightingMode", 0)),
+    "device-panel-no-lighting": _panel(("setLightingMode", -1)),
+    "device-panel-no-pad": _no_pad,
+    "device-panel-applied": _panel(("applyLighting",)),
+    "device-panel-already-set": _already_set,
+    "device-panel-error": _readback_error,
+    "device-panel-bad-port": _bad_port,
+    "device-orientation-top": _panel(orientation="dials-top"),
+    "device-orientation-right": _panel(orientation="dials-right"),
+    "device-orientation-bottom": _panel(orientation="dials-bottom"),
+    "device-orientation-left": _panel(orientation="dials-left"),
     "problems": _problems,
     "dialog-unsaved": _unsaved,
     "dialog-remove-layer": _remove_layer,
@@ -135,11 +196,22 @@ STATES = {
 }
 
 
+def make_pad(demo):
+    """The pad object for this run: the in-memory `FakePad` for `--demo` and every capture (no
+    HID call can happen), the `RealPad` only for a plain launch. Making a `RealPad` opens
+    nothing; its reads start with the controller, its one write only on [Apply to pad]."""
+    return device.FakePad() if demo else device.RealPad()
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="glra-osc config", description="Edit a glra-osc profile: layers, events, orientation"
     )
-    parser.add_argument("--demo", action="store_true", help="run on a throwaway fixture profile")
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="run on a throwaway fixture profile and a fake pad (no device I/O at all)",
+    )
     parser.add_argument("--capture", choices=sorted(STATES), metavar="STATE", help="render a state")
     parser.add_argument("--out", metavar="PNG", help="where --capture writes its picture")
     parser.add_argument("--dark", action="store_true", help="force the dark scheme")
@@ -167,7 +239,17 @@ def main(argv=None):
     home = demo_home() if args.demo else None
     try:
         scheme = "dark" if args.dark else "light" if args.light else "system"
-        controller = Controller(home=home, poll_ms=0 if args.demo else 1000, scheme=scheme)
+        # `--demo` and every capture run on the in-memory FakePad: no HID call can happen. Only a
+        # plain `glra-osc config` (no --demo) gets the RealPad, which reads the pad's state and
+        # writes lighting only on an explicit [Apply to pad] click.
+        pad = make_pad(args.demo)
+        controller = Controller(
+            home=home,
+            poll_ms=0 if args.demo else 1000,
+            scheme=scheme,
+            pad=pad,
+            cooldown_ms=0 if args.capture else Controller.APPLY_COOLDOWN_MS,
+        )
         engine = QQmlApplicationEngine()
         warnings = []
         engine.warnings.connect(lambda items: warnings.extend(str(i) for i in items))

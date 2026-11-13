@@ -10,7 +10,7 @@ import QtQuick.Layouts
 ApplicationWindow {
     id: root
     width: 1000
-    height: 640
+    height: 740
     minimumWidth: 860
     minimumHeight: 560
     visible: true
@@ -42,6 +42,7 @@ ApplicationWindow {
     palette.base: pal.surface
 
     property bool quitOk: false
+    property bool deviceOpen: false  // the device panel strip, collapsed at start
     onClosing: function(close) {
         if (controller.dirty && !quitOk) {
             close.accepted = false
@@ -90,6 +91,12 @@ ApplicationWindow {
             }
             AppButton { objectName: "revertButton"; text: "Revert"; pal: root.pal; onClicked: controller.revertProfile() }
             Item { Layout.fillWidth: true }
+            Text {
+                objectName: "padHeadline"
+                text: controller.padHeadline
+                font.pixelSize: 12
+                color: controller.device.pad.connected ? root.pal.accent : root.pal.muted
+            }
             Text {
                 text: controller.profileName + (controller.dirty ? " •" : "")
                 font.pixelSize: 13
@@ -225,13 +232,38 @@ ApplicationWindow {
             }
         }
 
-        Text {
-            objectName: "deviceLine"
+        DevicePanel {
+            objectName: "devicePanel"
+            visible: root.deviceOpen
             Layout.fillWidth: true
-            text: "▸ " + controller.deviceLine
-            elide: Text.ElideRight
-            font.pixelSize: 12
-            color: root.pal.muted
+            ctl: controller
+            pal: root.pal
+        }
+
+        // The device strip: one line when collapsed; a click opens the panel above it.
+        Rectangle {
+            objectName: "deviceStrip"
+            Layout.fillWidth: true
+            implicitHeight: 26
+            radius: 8
+            color: stripArea.containsMouse ? root.pal.hover : "transparent"
+            Text {
+                objectName: "deviceLine"
+                anchors.fill: parent
+                anchors.leftMargin: 6
+                verticalAlignment: Text.AlignVCenter
+                text: (root.deviceOpen ? "▾ " : "▸ ") + controller.deviceLine
+                elide: Text.ElideRight
+                font.pixelSize: 12
+                color: root.pal.muted
+            }
+            MouseArea {
+                id: stripArea
+                objectName: "deviceStripArea"
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: root.deviceOpen = !root.deviceOpen
+            }
         }
     }
 
