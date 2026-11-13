@@ -11,6 +11,11 @@ When writing lighting code, choosing an LED feedback design, or tempted to strea
 - per-key
 - rgb memory
 
+## Route chosen
+Bob, 2026-11-13: **route B** for `rgb-feedback`: per-key colours and firmware
+modes written rarely (bank changes and the like) under a write budget, with
+motion from the firmware's own modes. No host-streamed animation on stock firmware.
+
 ## Context
 Probed on Bob's pad (36ae:2475, firmware 103) on 2026-11-13 with Bob watching:
 `.loom/threads/rgb-feedback/led-probe*/findings.md`, script `probe.py`, baseline `baseline.json`.

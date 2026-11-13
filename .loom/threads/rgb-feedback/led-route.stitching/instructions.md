@@ -12,3 +12,16 @@ From `led-probe` findings, pick one and record it in glean:
   per key. Rescope with Bob and update `midi-feedback` / `banks` sketches.
 Then update the `led-driver`, `led-animator` and `led-demo` instructions to fit
 (frame rate, write budget, which features are dropped), before they're claimed.
+
+## Decision (Bob, 2026-11-13): route B
+
+"we'll go B." Per-key colours and firmware modes, written rarely (e.g. on a
+bank change), under a write budget; motion comes from the firmware's own modes
+(e.g. 11, lit on press). Every lighting write persists to flash at once
+(`glean:k16n3-lighting`; `led-probe`, `led-commit-timing`), and no RAM path
+exists on stock firmware (`led-ram-path`). Recorded in `glean:k16n3-lighting`.
+
+Still to do in this stitch: set the write budget (rate cap and per-session
+count) and rewrite `led-driver`, `led-animator`, `led-demo` and
+`led-acceptance` to fit B before they're claimed. Bob still wants to explore
+firmware approaches (`loom:firmware-approaches`); that doesn't block B.
