@@ -49,3 +49,29 @@ last layer across runs, or a `start` layer in the profile.
 *Default:* the app and runner take the directory name from one constant;
 `public-release` changes it and moves (or falls back to) an existing
 `glra-osc/profile.toml`. For that thread's shaping, not this run.
+
+## Bob's answers (2026-11-13, `lore:2026-11-13-config-design-answers`)
+
+Applied by `loom:design-answers`. Bob's words, then the reading taken where
+his words leave a detail open (Claude's, 2026-11-13, marked as such).
+
+- **Q1:** "i don't care about todays mapping files, we can hard break". The
+  latch default stands (he didn't object); legacy mapping files stop loading.
+- **Q2:** "sepearate rise and fall please". Claude's reading: `rise-ms` and
+  `fall-ms`, one `curve`.
+- **Q3:** "three layers selected by encoder presses. all buttons midi
+  momentary. channels 1, 2, and 3 depending on layer. left and middle encoder
+  inc and dec on some cc, channel changes with layer. right encoder is
+  absolute and global." Claude's reading: dial pushes are `layer-set` 1/2/3
+  (left to right); keys momentary notes 36–51 on every layer, channel = layer;
+  left and middle turns `cc-relative` CC 16 and 17, per-layer, channel = layer;
+  right turn `cc-absolute` CC 18, global, channel 1.
+- **Q4:** "quadratic in those variations is fine".
+- **Q5:** "copied to every layer is good".
+- **Q6:** "sure. yes let's check at the tour."
+- **Q7:** "lets put the profile in the application folder and have some sort
+  of pointer to the current one." Claude's reading: profiles live in
+  `~/Library/Application Support/glra-osc/profiles/*.toml`, and a `current`
+  file there names the active one.
+- **Q8:** "yes start on layer 1".
+- **Q9:** "sounds good".
