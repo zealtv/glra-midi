@@ -94,6 +94,7 @@ def describe_lighting(light):
             "color": {"shown": False, "on": False, "h": 0, "s": 255, "v": 255, "swatch": ""},
             "levels": list(LEVELS),
             "note": NO_LIGHTING,
+            "hint": NO_LIGHTING + " The pad's lighting stays as it is until you pick a mode.",
         }
     mode = lights.MODE_BY_NUMBER.get(light.mode)
     h, s, v = light.color or DEFAULT_COLOR
@@ -113,6 +114,7 @@ def describe_lighting(light):
         },
         "levels": list(LEVELS),
         "note": "",
+        "hint": "",
     }
 
 

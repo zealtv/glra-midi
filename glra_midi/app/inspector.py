@@ -144,9 +144,10 @@ def describe(profile, control, tab, drafts=None, note_names=True):
     * `applies`: `"layer"` | `"global"` (events only); `appliesText`: its words;
     * `kind`, `kinds`: the event kind and the kinds this control takes;
     * `fields`, `noteName`: see `_field_entries`;
-    * `layerKey`: `{kind, layer}` for layer keys; `layerChoices`: the layers a Set can name;
+    * `layerKey`: `{kind, layer}` for layer keys; `layerChoices`: `[{value, label}]`, the layers a Set can name;
     * `alsoOn`: `[{layer, text}]` for a per-layer control's other layers;
-    * `defaultChannel`: the profile's `[midi] channel`.
+    * `channelChoices`: `[{value, label}]` for a Channel field, the first being the profile's
+      default (`default (1)`).
     """
     tab = tab or None
     drafts = drafts or {}
@@ -172,15 +173,23 @@ def describe(profile, control, tab, drafts=None, note_names=True):
         "fields": {},
         "noteName": "",
         "layerKey": {"kind": "layer-inc", "layer": tab or 1},
-        "layerChoices": list(range(1, profile.layer_count + 1)),
+        "layerChoices": [
+            {"value": str(n), "label": f"Layer {n}"} for n in range(1, profile.layer_count + 1)
+        ],
         "alsoOn": [],
         "layersUsed": "",
-        "defaultChannel": profile.channel,
+        "layersUsedText": "",
+        "channelChoices": [{"value": "default", "label": f"default ({profile.channel})"}]
+        + [{"value": str(n), "label": str(n)} for n in range(1, 17)],
     }
     if shape == "per-layer" and tab is None:
         used = [n for n, _ in value.events]
         out.update(mode="each", applies="each", layersUsed=_list_layers(used).capitalize())
         out["appliesText"] = "Different on each layer"
+        verb = "holds" if len(used) == 1 else "hold"
+        out["layersUsedText"] = (
+            f"{out['layersUsed']} {verb} an event. Pick a layer tab to edit one layer."
+        )
         return out
     action = value if shape != "per-layer" else value.get(tab)
     if action is None:

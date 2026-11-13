@@ -23,6 +23,9 @@ release.
 
 ### Fixed
 
+- Config app: the Inspector's "Layers 1 and 3 hold an event…" note now says "holds" for a
+  single layer. The words behind the Channel and Layer pickers, the lighting hint and the "Pad now"
+  line moved from QML into the Python model, with no change to what they show.
 - Config app: [Select] on a Problems row now also switches to the layer the problem names
   (for a problem at `key.4.layers.3`, layer 3), so the inspector shows the control the message
   talks about. A problem that names no layer leaves the tab alone.

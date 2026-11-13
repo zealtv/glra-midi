@@ -341,6 +341,9 @@ class Controller(QObject):
                 "connected": self._pad_connected,
                 "headline": self._pad_headline,
                 "now": self._pad_now,
+                "text": f"Pad now: {self._pad_now}"
+                if self._pad_connected
+                else f"{self._pad_headline} — the rest of the app works without it.",
             },
             "apply": {
                 "enabled": self._can_apply(),

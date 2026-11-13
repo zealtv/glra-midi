@@ -175,6 +175,9 @@ class ReadTests(DeviceCase):
         self.assertEqual(self.pad.reads, 1)
         self.assertEqual(self.device["pad"]["headline"], "Pad: connected (103)")
         self.assertEqual(
+            self.device["pad"]["text"], "Pad now: Flow (rows) (mode 4) · brightness 4 · speed 3"
+        )
+        self.assertEqual(
             self.device["pad"]["now"], "Flow (rows) (mode 4) · brightness 4 · speed 3"
         )
         self.assertEqual(self.c.padHeadline, "Pad: connected (103)")

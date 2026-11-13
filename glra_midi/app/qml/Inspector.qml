@@ -26,14 +26,8 @@ Rectangle {
     function choices(values) {
         return values.map(function(v) { return { value: v[0], label: v[1] } })
     }
-    readonly property var channelChoices: {
-        var list = [{ value: "default", label: "default (" + (edit.defaultChannel || 1) + ")" }]
-        for (var n = 1; n <= 16; n++) list.push({ value: String(n), label: String(n) })
-        return list
-    }
-    readonly property var layerChoices: (edit.layerChoices || []).map(function(n) {
-        return { value: String(n), label: "Layer " + n }
-    })
+    readonly property var channelChoices: edit.channelChoices || []
+    readonly property var layerChoices: edit.layerChoices || []
     readonly property var curveChoices: choices([
         ["linear", "Linear"], ["ease-in", "Ease in"], ["ease-out", "Ease out"], ["ease-in-out", "Ease in-out"]])
 
@@ -111,7 +105,7 @@ Rectangle {
                 Text {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: panel.edit.layersUsed + " hold an event. Pick a layer tab to edit one layer."
+                    text: panel.edit.layersUsedText || ""
                     font.pixelSize: 12
                     color: panel.pal.muted
                 }

@@ -121,6 +121,13 @@ class DescribeTests(unittest.TestCase):
         d = insp.describe(p, "key.2", None)
         self.assertEqual((d["mode"], d["fields"]), ("each", {}))
         self.assertEqual(d["layersUsed"], "Layers 1 and 3")
+        self.assertEqual(
+            d["layersUsedText"], "Layers 1 and 3 hold an event. Pick a layer tab to edit one layer."
+        )
+        # The words come from Python, not QML (design 4.1).
+        self.assertEqual(d["channelChoices"][0], {"value": "default", "label": "default (1)"})
+        self.assertEqual(len(d["channelChoices"]), 17)
+        self.assertEqual(d["layerChoices"][0], {"value": "1", "label": "Layer 1"})
 
     def test_a_layer_key_is_a_layer_key_on_every_tab(self):
         p = profile_with(**{"enc.1.push": prof.LayerSet(layer=2)})

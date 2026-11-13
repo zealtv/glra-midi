@@ -202,7 +202,7 @@ Rectangle {
             Text {
                 objectName: "lightNote"
                 visible: !panel.light.set
-                text: panel.light.note + " The pad's lighting stays as it is until you pick a mode."
+                text: panel.light.hint
                 font.pixelSize: 12
                 color: panel.pal.muted
             }
@@ -210,9 +210,7 @@ Rectangle {
                 objectName: "padNow"
                 Layout.fillWidth: true
                 elide: Text.ElideRight
-                text: panel.dev.pad.connected
-                    ? "Pad now: " + panel.dev.pad.now
-                    : panel.dev.pad.headline + " — the rest of the app works without it."
+                text: panel.dev.pad.text
                 font.pixelSize: 12
                 color: panel.pal.ink
             }
