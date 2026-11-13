@@ -321,6 +321,31 @@ class EditTests(DeviceCase):
         self.c.setPort("Fixed")
         self.assertEqual(self.device["port"], {"text": "Fixed", "error": ""})
 
+    def test_an_invalid_port_draft_counts_as_unsaved_and_blocks_save(self):
+        # Review 10: the field showed "" while the title had no bullet and Save wrote the old port.
+        self.assertFalse(self.c.dirty)
+        self.c.setPort("")
+        self.assertTrue(self.c.dirty)
+        self.assertTrue(self.c.title.endswith("•"))
+        self.assertFalse(self.c.canSave)
+        self.assertFalse(self.c.canSaveAs)
+        self.c.saveProfile()
+        self.assertIn("Fix the MIDI port before saving", self.c.error)
+        self.assertEqual(prof.load_profile(self.c.path).port, "GLRA K16")
+        self.assertTrue(self.c.dirty)
+        self.c.setPort("Fixed")  # a valid port ends the draft; the edit itself is unsaved
+        self.assertTrue(self.c.dirty)
+        self.assertTrue(self.c.canSave)
+        self.c.setPort("GLRA K16")  # back to what the file holds
+        self.assertFalse(self.c.dirty)
+
+    def test_quitting_with_an_invalid_port_draft_asks(self):
+        asked = []
+        self.c.unsavedPrompt.connect(asked.append)
+        self.c.setPort("")
+        self.c.requestQuit()
+        self.assertEqual(len(asked), 1)
+
     def test_channel_out_of_range_is_refused(self):
         self.c.setChannel(17)
         self.assertEqual(self.c.profile.channel, 1)

@@ -140,7 +140,9 @@ class Controller(QObject):
 
     @property
     def is_dirty(self):
-        return self._profile != self._baseline
+        """Unsaved edits: the profile differs from the file, or the port field holds a draft
+        the profile refused (it stays in the field, so quitting must ask)."""
+        return self._profile != self._baseline or self._port_draft is not None
 
     def _current_file(self):
         return prof.app_dir(self._home) / prof.CURRENT_FILE_NAME
@@ -182,6 +184,12 @@ class Controller(QObject):
         """Write the profile to `path`. A start-up read failure blocks plain Save (it would
         overwrite the broken file); Save As passes `allow_broken` since it names another file."""
         problems = prof.validate(self._profile)
+        if self._port_draft is not None:
+            # The field shows something the profile refused; saving would write the old port
+            # under a field that says otherwise.
+            self._error = f"Fix the MIDI port before saving: {self._port_draft[1]}"
+            self._refresh()
+            return False
         if problems or (self._load_error and not allow_broken):
             self._error = self._load_error or (
                 f"Fix {_plural(len(problems), 'problem')} before saving: "
@@ -372,8 +380,8 @@ class Controller(QObject):
             "problems": problems,
             "inspector": self._inspector(),
             "device": self._device_model(),
-            "canSave": not problems and not self._load_error,
-            "canSaveAs": not problems,
+            "canSave": not problems and not self._load_error and self._port_draft is None,
+            "canSaveAs": not problems and self._port_draft is None,
         }
         self.changed.emit()
 
