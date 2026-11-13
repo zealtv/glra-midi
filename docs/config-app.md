@@ -50,6 +50,13 @@ dependency, pinned like the others), at
 uses TOML for mappings, Bob can hand-edit it, and `tomli-w` writes the subset
 we need with stable output.
 
+Bob, 2026-11-13 (`loom:public-release`, off the queue): after the tour the
+project becomes glra-midi. The path then becomes
+`~/Library/Application Support/glra-midi/profile.toml`; that rename should
+move an existing `glra-osc` profile across (or read it as a fallback). Code
+should take the directory name from one constant so the rename touches one
+line. (Q9.)
+
 ### 2.1 Top level
 
 | Key / table | Meaning | Default |
@@ -808,4 +815,4 @@ Listed with the default taken in
 Q1 latch on CC momentary; Q2 one ease time both ways; Q3 the default
 profile's layout; Q4 quadratic curves; Q5 global → per-layer copies to every
 layer; Q6 lighting mode names and fields; Q7 profile location; Q8 the
-starting layer. The tour lists them all.
+starting layer; Q9 the profile path across the glra-midi rename. The tour lists them all.

@@ -43,3 +43,9 @@ picker.
 **Q8. Starting layer (3.2).** *Default:* `glra-osc run` starts on layer 1, and
 a reload keeps the active layer if it still exists. Alternative: remember the
 last layer across runs, or a `start` layer in the profile.
+
+**Q9. The profile path across the glra-midi rename (2).** Bob said on
+2026-11-13 the repo becomes glra-midi after the tour (`loom:public-release`).
+*Default:* the app and runner take the directory name from one constant;
+`public-release` changes it and moves (or falls back to) an existing
+`glra-osc/profile.toml`. For that thread's shaping, not this run.
