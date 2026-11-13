@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from glra_osc import profile
 from glra_osc.profile import (
     CONTROL_NAMES,
     CcAbsolute,
@@ -1017,6 +1018,30 @@ class ControlNameTests(unittest.TestCase):
         self.assertEqual(len(CONTROL_NAMES), 22)
         self.assertEqual(CONTROL_NAMES[0], "key.1")
         self.assertEqual(CONTROL_NAMES[16:18], ("enc.1.push", "enc.1.turn"))
+
+
+class FieldAccessTests(unittest.TestCase):
+    def test_specs_describe_the_fields_the_parser_checks(self):
+        specs = {s["key"]: s for s in profile.event_field_specs("cc-step")}
+        self.assertEqual((specs["step"]["lo"], specs["step"]["hi"], specs["step"]["nonzero"]), (-127, 127, True))
+        self.assertEqual(specs["curve"]["choices"], profile.CURVES)
+        self.assertTrue(specs["cc"]["required"])
+        self.assertFalse(specs["ease-ms"]["required"])
+        self.assertIsNone({s["key"]: s for s in profile.event_field_specs("note")}["channel"]["default"])
+
+    def test_fields_round_trip_through_an_event(self):
+        event = profile.CcMomentary(cc=20, low=10, high=120, rise_ms=5, curve="ease-in", channel=3)
+        fields = profile.event_fields(event)
+        self.assertEqual(fields["rise-ms"], 5)
+        self.assertEqual(profile.event_from_fields("cc-momentary", fields), event)
+
+    def test_event_from_fields_uses_the_parsers_errors(self):
+        with self.assertRaisesRegex(ProfileError, r"^k\.cc: expected an integer 0\.\.127, got 300"):
+            profile.event_from_fields("cc-set", {"cc": 300, "value": 1}, path="k")
+        with self.assertRaisesRegex(ProfileError, "value: required"):
+            profile.event_from_fields("cc-set", {"cc": 3})
+        with self.assertRaisesRegex(ProfileError, "kind"):
+            profile.event_from_fields("nonsense", {})
 
 
 if __name__ == "__main__":

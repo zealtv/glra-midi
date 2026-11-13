@@ -1025,3 +1025,42 @@ def rename_layer(profile, layer, name):
     names = list(profile.layer_names)
     names[layer - 1] = name
     return Edit(replace(profile, layer_names=tuple(names)))
+
+
+# --- field access for editors -------------------------------------------------------------
+# The app's inspector edits one field at a time. These read the same spec table the parser
+# uses, so a typed value is checked by the file's own rules and says the file's own words.
+
+
+def event_field_specs(kind):
+    """The field specs of an event kind, as dicts: `key`, `type` ("int" | "choice"), `lo`/`hi`
+    (ints), `choices` (choices), `default` (None when optional) and `required`."""
+    out = []
+    for spec in _SPECS[kind]:
+        item = {
+            "key": spec.key,
+            "required": spec.default is _REQUIRED,
+            "default": None if spec.default is _REQUIRED else spec.default,
+        }
+        if isinstance(spec, _Choice):
+            item.update(type="choice", choices=spec.choices)
+        else:
+            item.update(type="int", lo=spec.lo, hi=spec.hi, nonzero=spec.nonzero)
+        out.append(item)
+    return out
+
+
+def event_fields(event):
+    """`{toml key: value}` for every field of `event`, defaults included."""
+    return {spec.key: getattr(event, spec.attr) for spec in _SPECS[event.kind]}
+
+
+def event_from_fields(kind, fields, path="event"):
+    """Build an event of `kind` from `{toml key: value}`, checking it as parsing a file would.
+    Raises `ProfileError` (message starts with `path.<key>`). A key left out takes its default;
+    a value of None means "left out"."""
+    if kind not in EVENT_CLASSES:
+        raise ProfileError(f"{path}.kind: unknown kind {kind!r}")
+    table = {"kind": kind}
+    table.update({k: v for k, v in fields.items() if v is not None})
+    return _parse_event(table, path, (kind,))
