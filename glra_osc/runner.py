@@ -15,6 +15,7 @@ from .decode import Decoder
 from .engine import Engine, describe
 from .mapping import load_mapping
 from .monitor import watch
+from .profile import profile_from_mapping
 from .silence import Guard, SilenceError, Silencer, TYPING_WARNING, refusal_message
 
 
@@ -58,7 +59,8 @@ def run(config=None, dry_run=False, out=None, err=None, allow_typing=False, sile
         print(TYPING_WARNING, file=err, flush=True)
 
     decoder = Decoder()
-    engine = Engine(mapping)
+    # Until runner-profile loads profiles directly: a legacy mapping as a one-layer profile.
+    engine = Engine(profile_from_mapping(mapping))
     port = DryRunPort(out) if dry_run else MidiPort(mapping.port)
 
     def say(text):
