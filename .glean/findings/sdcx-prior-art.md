@@ -29,11 +29,13 @@ links: `.loom/threads/rgb-feedback/re-prior-art.tied/sources.md`):
 - `RiderDeck-8/macropad-movil` (no licence, so read only): key-action type table
   (`1F` light-control actions run in firmware on a key press).
 - Vendor `www.sdcx-tech.com/update.json` (2026-11-13) has no `36ae_2475` entry;
-  `0816_2475` maps to `16keysd_v105.bin` (32 KB; Bob's pad runs 103). Updater
-  table: `mcu_type 9520` = 30 KB user + 2 KB boot at `0x7800`, which fits the
+  `0816_2475` maps to `16keysd_v105.bin`, which `firmware-feasibility` found to
+  be a `951`-class image (wrong chip for Bob's `9520`). Updater table:
+  `mcu_type 9520` = 30 KB user + 2 KB boot at `0x7800`, which fits the
   `SDC32K` marking. Never send firmware meant for another ID.
-- None names the MCU, holds a firmware dump, or implements the update path
-  (`06 55`, `06 5A`); all refuse it.
+- None names the MCU, holds a firmware dump, or implements the update path;
+  all refuse it. Some write it `06 55`/`06 5A`; the 2026-11-13 bundle sends
+  `55 …`/`5a …` with no `06` prefix (`glean:k16n3-firmware-replacement`).
 
 ## Associations
 - [[k16n3-lighting]]
