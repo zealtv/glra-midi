@@ -21,7 +21,7 @@ When considering custom firmware, QMK/Vial, flashing, the vendor updater (`55`/`
 
 ## Context
 As of the 2026-11-13 desk study (`loom:firmware-feasibility`,
-`.loom/threads/rgb-feedback/firmware-feasibility.tied/feasibility.md`), with
+`.loom/dropped/rgb-feedback/firmware-feasibility.tied/feasibility.md`), with
 Bob's photos (`lore:2026-11-13-k16n3-board-photos`):
 - `U1` is marked `SDCX SDC32K 952CCU6` (read off a photo); vendor
   `mcu_type "9520"`: 32 KB flash, app at `0x0000–0x77FF`, a 2 KB
@@ -32,7 +32,7 @@ Bob's photos (`lore:2026-11-13-k16n3-board-photos`):
   (32K, full-speed USB, WS2812, 48-pin). ZXW's catalogue lists it, together with
   an `M9F951`, which matches the updater's `951` / `9520` names. If a datasheet
   and a read-capable programmer turn up, the "no backup" point below may change.
-  Tracked in `loom:firmware-approaches`.
+  Tracked in `loom:firmware-approaches` (under `custom-firmware`, parked by Bob on 2026-11-13).
 - The vendor images decode as an unidentified 16-bit-word ISA (not 8051, ARM
   or RISC-V; the worker's reading). No datasheet, compiler or open-firmware
   support found.

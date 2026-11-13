@@ -1,6 +1,6 @@
 # Working notes for agents
 
-glra-osc: host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI controller (OSC later), building on the peer repo `../glra-studio`. A development repo; as of 2026-11-12 the MIDI MVP (`midi-mvp`) is tied, and the next goals (`banks`, `midi-feedback`, `osc-io`, `rgb-feedback`) wait on the loom.
+glra-osc: host-side middleware that turns the G-LRA K16_N3 macropad into a silent MIDI controller (OSC later), building on the peer repo `../glra-studio`. A development repo; as of 2026-11-13 the MIDI MVP (`midi-mvp`) is tied, `config-app` (a configuration app: layers, events, factory RGB mode, orientation) is queued for an unattended orchestrator run (`.loom/threads/config-app/orchestrator.md`), and `custom-firmware` and `backlog` (`osc-io`, `midi-feedback`) are parked.
 
 `CLAUDE.md` is a symlink to this file, so every agent runtime reads the same notes.
 

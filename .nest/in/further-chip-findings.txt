@@ -1,0 +1,82 @@
+## M9F9520 datasheet search — new findings
+
+I haven't found a full M9F9520 datasheet yet, but I did find something useful that wasn't in the previous search: an original Masses Chip 2025 MCU selection catalogue, available as a PDF.
+
+Masses Chip — FLASH MCU Selection Catalogue (2025)
+
+Original manufacturer document · 1 page · 190 KB
+
+[Open the original PDF](https://redmine.kw-chip.com/attachments/download/463/%E7%A3%90%E8%8A%AF%E7%94%B5%E5%AD%90FLASH%E9%80%89%E5%9E%8B%E7%9B%AE%E5%BD%952025.pdf?utm_source=chatgpt.com)
+
+The catalogue explicitly lists the M9F9520 in its USB MCU family, alongside the M9F951 and M9F9800.&#x20;
+
+[image](https://www.google.com/s2/favicons?domain=https://redmine.kw-chip.com\&sz=32)
+
+redmine.kw-chip.com
+
+
+
+The M9F9520 row gives us:
+
+| Specification  | M9F9520                    |
+| -------------- | -------------------------- |
+| Architecture   | Masses Chip USB MCU family |
+| Flash          | 32 KB                      |
+| RAM            | 2 KB nominal               |
+| I/O            | 44                         |
+| Hardware stack | 15 levels                  |
+| Timers         | Three 16-bit               |
+| PWM            | Eight 8-bit outputs        |
+| USB            | USB 2.0                    |
+| Supply         | 2.2–5.5 V                  |
+| Package        | 48 pins                    |
+
+That gives us an additional manufacturer-origin reference, independently supporting the ZXW distributor catalogue. The two catalogues differ slightly in RAM reporting (2 KB nominal versus 2,216 bytes), so I wouldn't assume an exact usable RAM size until we obtain the detailed specification.
+
+## Where the full datasheet might be
+
+I checked the following sources:
+
+| Source                                                                                                             | Result                                                                     |
+| ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| [Masses Chip official downloads](https://www.masses-chip.com/c/xzzq?utm_source=chatgpt.com)                        | Other MCU specifications available, but no indexed M9F9520 datasheet       |
+| [ZXW MCU downloads](https://zxw-chip.com/file/15?utm_source=chatgpt.com)                                           | Page explicitly says 暂无附件 — no attachments                                 |
+| [Shenzhen Gaoxin document archive](https://redmine.kw-chip.com/projects/chip-doc/documents?utm_source=chatgpt.com) | Found the selection catalogue, but no full M9F9520 datasheet               |
+| Chinese and English datasheet searches                                                                             | No verified M9F9520 pinout, programming manual or complete datasheet found |
+| GitHub, distributor and alternative document searches                                                              | No verified matching datasheet                                             |
+
+The closest related product with publicly described technical details is the [M9F951](https://www.masses-chip.com/2291.html?utm_source=chatgpt.com). But the selection catalogue shows that these chips have different stack depths, I/O counts and peripherals. We shouldn't assume their pinouts or programming procedures are interchangeable.
+
+## The best next route
+
+I'd approach Masses Chip directly. Their website provides the following contact details.&#x20;
+
+[image](https://www.google.com/s2/favicons?domain=https://www.masses-chip.com\&sz=32)
+
+masses-chip.com
+
+
+
+Masses Chip — 合肥磐芯电子有限公司
+
+cs\@masses-chip.com
+
++86 551 65336515
+
+Here's the exact Chinese request I'd send:
+
+&#x20;Copy
+
+您好，我正在研究采用 M9F9520 的 USB 键盘控制板。\
+\
+请问能否提供 M9F9520 的完整规格书（包括引脚定义）、开发资料、编程/烧录接口说明，以及适用的开发工具和烧录器？\
+\
+另外，请问该芯片是否支持读取现有 Flash 程序以便备份？\
+\
+谢谢！
+
+That asks for the complete specification, pin definitions, development tools, programming interface and firmware readback capability.
+
+Bottom line: We now have a genuine manufacturer-origin PDF identifying the M9F9520 and its main hardware specifications. But the detailed datasheet remains elusive. I'd concentrate on getting it from Masses Chip rather than attempting to infer the programming interface from an adjacent MCU.
+
+And one important caveat remains: even with the M9F9520 datasheet, we still need to confirm that your `SDC32K / 952CCU6` is actually that silicon before connecting a programmer.

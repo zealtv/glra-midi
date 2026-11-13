@@ -12,13 +12,18 @@ When writing lighting code, choosing an LED feedback design, or tempted to strea
 - rgb memory
 
 ## Route chosen
-Bob, 2026-11-13: **route B** for `rgb-feedback`: per-key colours and firmware
-modes written rarely (bank changes and the like) under a write budget, with
-motion from the firmware's own modes. No host-streamed animation on stock firmware.
+Bob, 2026-11-13: first **route B** (per-key colours and firmware modes written
+rarely under a write budget), then later that day: "for the moment we will
+accept using the factory firmware led modes and continue with the app creation"
+(`lore:2026-11-13-config-app-brief`). So as of that message: no per-key colours
+and no host animation; `rgb-feedback` was dropped, and the user picks a factory
+mode in the configuration app (`loom:lighting-modes`, `loom:app-device-panel`),
+written to the pad only on an explicit Apply. Per-key control would come back
+only through `loom:custom-firmware` (parked).
 
 ## Context
 Probed on Bob's pad (36ae:2475, firmware 103) on 2026-11-13 with Bob watching:
-`.loom/threads/rgb-feedback/led-probe*/findings.md`, script `probe.py`, baseline `baseline.json`.
+`.loom/dropped/rgb-feedback/led-probe.tied/findings.md`, script `probe.py`, baseline `baseline.json`.
 
 - **Per-key colour** `06 14 03 <lo> <hi> 00 00 00 <r> <g> <b>`, offset = 3 × slot,
   ack `aa 14 01 …` in ~7–10 ms. Visible at once, but **only in mode 12 (Custom)**.
@@ -42,7 +47,7 @@ Probed on Bob's pad (36ae:2475, firmware 103) on 2026-11-13 with Bob watching:
   modes 1, 2, 4–7, 11. All verified by eye except direction. Each change is a
   persisted write: set rarely, never modulate live.
 - The flows suggest the vendor's frame has the dials on the **right**
-  (`loom:orientation`).
+  (`loom:orientation`, under `config-app` since 2026-11-13).
 - **No RAM path found** (desk, `loom:led-ram-path`, 2026-11-13): the vendor
   configurator's group-6 opcodes `07 09 0c 0d 40 41 fb` cover the factory key
   table, bulk keymap, macros, URL and profile, none of them lighting; its finer

@@ -13,8 +13,11 @@ The source of truth is qtable's `.glean/findings/one-worktree-one-cache-one-pane
 - Watch the visible screen, not scrollback: approval prompts ("Do you want to proceed"), a done marker (the worker touches a file, since a `WORKER DONE` line in the pasted brief matches itself), and an unchanged screen over ~10 min. In this session (2026-11-12) that watcher was a small polling script on the pane run under Monitor.
 - Usage: read `~/repos/ai-kit/tools/claude-usage`; ask Bob for this session's floors. qtable's are per-run, not standing.
 
+## Unattended queue runs (2026-11-13)
+Bob, 2026-11-13: "flesh the loom out so that an opus agent can work through it autonomously, acting as an orchestrator (workflow example in the qtable repo peer to this repo)". The runbook written for that sits at `.loom/threads/config-app/orchestrator.md`: the queue bounds the run (qtable's `work-the-queue-as-a-bounded-release.md`), new stitches go on the queue, questions for Bob get written down and parked, and the run stops at the tour. No pad writes while unattended.
+
 ## Triggers
-claude -p, tmux pane, worker pane, delegate, dispatch, qtable process, interactive session
+claude -p, tmux pane, worker pane, delegate, dispatch, orchestrator, unattended, work the queue, qtable process, interactive session
 
 ## Associations
 - [[brief-is-direction]]

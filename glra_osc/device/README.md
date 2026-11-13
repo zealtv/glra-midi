@@ -21,7 +21,7 @@ and `tests/test_transactions.py`).
 
 `model.py` and `learn.py` came along because `transactions.py` imports
 `VISIBLE_SLOTS` from `model.py`, which imports `usage_name` from `learn.py`.
-Lighting (`lighting.py`) stays out until `rgb-feedback`.
+Lighting (`lighting.py`) stays out until `loom:lighting-modes` (`config-app`).
 
 To sync with a newer glra-studio, diff against the commit above and update
 this note.

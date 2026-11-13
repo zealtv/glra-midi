@@ -15,7 +15,7 @@ When looking for outside protocol evidence, lighting persistence claims, or firm
 
 ## Context
 Found by the `re-prior-art` worker, 2026-11-13 (full list, trust ratings and
-links: `.loom/threads/rgb-feedback/re-prior-art.tied/sources.md`):
+links: `.loom/dropped/rgb-feedback/re-prior-art.tied/sources.md`):
 - `parsaj-dev/sdcx-keypad` (MIT; HCY-K006 `0816:246f`): driver + protocol notes;
   issue #4 is a G-LRA k6_n1 on `36ae:246f` (our vendor ID); issue #5: fw 106
   needs ~10 ms between chunked writes.
