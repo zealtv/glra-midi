@@ -45,9 +45,15 @@ C = derived from vendor code only.
   with "no recovery path without hardware" (documented).
 - **Open issues** (read 2026-11-13): #6 `7dfa:dcfd` SD-K4 (HCY-004, fw 101, bought on Temu, 4 keys; per-key
   colour works for keys 0–3 but `key color all` has no effect, colour readback is empty); #4 `36ae:246f`
-  "G-LRA k6_n1" (fw 100, per-key colour works, readback empty); #5 HCY-K006 **firmware 106** drops
+  "G-LRA k6_n1" (fw 100, bcdDevice 0100, bought on Temu, per-key colour works, readback empty, reporter
+  offers to upload their device's layout data; **same vendor ID as Bob's pad**, so the nearest sibling we
+  know of); #5 HCY-K006 **firmware 106** drops
   back-to-back macro writes unless a ~10 ms pause separates the 59-byte chunks (reported; reporter fixed
-  it locally); #1 `0816:2473`. None names an MCU or K16.
+  it locally); #1 `0816:2473` (12-key; **board marking `SD014_K007_12Key_RGB_V1.0`, dated 2023-10-19, controller marked
+  `SDC4BK 231C6T6 FA27.1624`**, firmware 106, per-key colour and remap work, colour readback empty, layout
+  JS chunk and extracted JSON attached; first-hand marking, reported 2026-11-13 reading). None names a K16;
+  #1's mcu_type isn't stated in the issue (the manager's note says the layout says `951`; I haven't
+  opened the attachment).
 - Bears on: `led-ram-path` (per-key `06 14`, `06 12`), write pacing (10 ms between chunks on fw 106;
   our fw 103 not tested).
 
@@ -151,8 +157,13 @@ Taobao/1688 listings weren't reachable, and a Chinese-language query gave nothin
 
 ## 3. The MCU question
 
-- Markings read off Bob's photo: `SDC32K 952CCU6` (from the stitch brief). A Reddit snippet shows
-  `sdc48k` on a different PID. Both look like house-branded marks.
+- Markings seen so far (all reported/observed from photos by others, except the first): `SDC32K 952CCU6`
+  (Bob's board, from the stitch brief); `SDC4BK 231C6T6 FA27.1624` (sdcx-keypad issue #1, 12-key
+  `SD014_K007` board, fw 106); `sdc48k` (Reddit snippet, PID `246E`). All look like house-branded marks:
+  `SDC` + a size-ish code, then a second field. The second fields echo ST-style suffixes (`C6T6` =
+  48-pin, 32 KB, LQFP; `CCU6` = 48-pin, 256 KB, UFQFPN), but "SDC32K" says 32 KB and the vendor table says
+  `9520` = 32 KB, so reading them as STM32 order codes would contradict that. Weak numerology, listed so
+  nobody re-derives it; it identifies nothing (inferred).
 - Vendor updater tables (observed in the 2026-11-13 bundle, `eh` object, for `firmware-feasibility`):
 
   | `mcu_type` | user_size | boot_size | boot start | reading |
@@ -169,6 +180,9 @@ Taobao/1688 listings weren't reachable, and a Chinese-language query gave nothin
   streams the `.bin` after switching the pad into a bootloader mode, i.e. updates come in over the
   same HID interface (documented). Nothing says whether the bootloader can be entered by a hardware
   strap, nor how to recover from a bad write.
+- The attachments on issue #1 (layout JS/JSON for a 12-key `0816:2473`) and `docs/reference-layout-0816_246f.js`
+  in sdcx-keypad hold other models' layout files; not opened here. They would show `mcu_type` for those
+  models and the 12-key's mode table, useful for comparing against our `36ae_2475.json` reading.
 - Public candidates I couldn't confirm or exclude: WCH CH55x/CH32, Sonix SN32F, Nuvoton, HK/CS32 clones.
   The 32 KB flash and USB 2.0 full-speed HID with 64-byte reports fit all of them. **No datasheet found.**
 - Practical read: no open firmware port or Vial/QMK target is known for this MCU. If `firmware-feasibility`
