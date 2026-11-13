@@ -112,6 +112,13 @@ Needs Python 3.13+ on macOS (Homebrew's `python3.14` works).
 
 `tools/app-capture.sh <state> <out.png>` renders a named state of the app offscreen.
 
+## Releases
+
+Versions follow SemVer (0.x: a minor bump may break the profile format or the command line);
+releases go out as GitHub releases only, with a wheel and an sdist attached. What changed is in
+[`CHANGELOG.md`](CHANGELOG.md); how a release gets cut and checked is in
+[`docs/releasing.md`](docs/releasing.md) (`tools/release-check.sh <version>`).
+
 ## Help wanted
 
 We're looking for information on the pad's microcontroller (marked `SDC32K 952CCU6`;
