@@ -75,3 +75,25 @@ distilled into glean, a design change in `docs/`, a stitch on the loom. Those
 are different consequences of one thing, not competing copies of it. Name the
 results in a nest receipt as `lore:<id>`, `glean:<id>`, `loom:<id>` or
 `path:<repo-relative-path>`.
+
+## Publishing
+
+Shape: **public-with-primitives** (`~/repos/ai-kit/skills/repo-setup/reference/public-release.md`;
+Bob, 2026-11-14: "sometimes i'm ok exposing primitives as in the case of glra which is a kind of
+research output"). `zealtv/glra-midi` has been public since 2026-11-13, with full history, so the
+dotdirs are public text: write lore, findings and loom notes for outside readers, and keep anything
+private about people, places or other projects out of them. Every push, tag, GitHub release and
+visibility change needs Bob's go-ahead at the time (`glean:release-process`, `docs/releasing.md`).
+
+## Orchestrated runs
+
+Runs that delegate stitches to worker agents follow the `orchestrate` skill
+(`~/repos/ai-kit/skills/orchestrate/SKILL.md`). This repo's own rules for them (one pad-touching worker
+at a time, a `.venv` per worktree) are in `glean:delegate-in-visible-tmux-panes`, and they win where the
+two differ.
+
+## Upgrading the primitives
+
+They were installed from Bob's local checkouts (`~/repos/glean`, `loom`, `lore`, `nestlings`) with each
+one's `install.sh <host-dir>`; groundhog is vendored from `~/repos/groundhog`. Re-running an installer
+repairs the script and README and never touches stored contents, `tend.md` or `distil.md`.
