@@ -4,7 +4,7 @@ A tiny, file-based protocol for recurring items.
 
 The script remains passive: it materializes deliveries when explicitly ticked.
 The [optional runtime contract](docs/runtime-contract.md) specifies supervision,
-ownership, pause and consumer handoff. Bob accepted the design on 2026-11-15.
+ownership, pause and consumer handoff. The design was accepted on 2026-11-15.
 This version implements all of it on hosts with the lock and process tools it
 needs: the read-only inspection commands (`capabilities --json` and
 `status --json`, see [Inspection](#inspection)); ownership, the runner and the
@@ -212,32 +212,25 @@ The next tick will refire it. Groundhog has no other override; the journal is th
 
 Old `fired/<date>/` directories are pruned by `sweep` on the same retention as `out/`.
 
-## Vendoring
+## Installing and upgrading
 
-To add groundhog to another project, copy `groundhog.sh` and `README.md`
-into the project's `.groundhog/` directory, then run
-`./.groundhog/groundhog.sh init` to seed the trays:
-
-```sh
-mkdir -p <project>/.groundhog
-cp groundhog.sh README.md <project>/.groundhog/
-<project>/.groundhog/groundhog.sh init
-```
+To install groundhog, copy the `.groundhog/` directory into the project. To
+upgrade, run `./install.sh <host-dir>` from a groundhog checkout: it refreshes
+`groundhog.sh`, `README.md` and `docs/`, runs `init` (which only creates
+missing trays), and leaves `schedule/`, `out/`, `fired/` and `runtime/` alone.
 
 `init` creates `schedule/`, `out/`, and `fired/` next to itself.
-`groundhog.sh` operates on the `.groundhog/` directory it lives in, so
-each vendored copy is self-contained. `groundhog.sh` is the only file the
-instance needs; `README.md` is documentation (its link to
-`docs/runtime-contract.md` points into this repository and dangles in a
-vendored copy). `./install.sh <host-dir>` does the same copy and runs `init`.
-Neither starts a runner, enrolls an owner or writes a configuration: see
+`groundhog.sh` operates on the `.groundhog/` directory it lives in, so each
+copy is self-contained, and `groundhog.sh` is the only file the instance
+needs; `README.md` and `docs/` are documentation. Neither a copy nor
+`install.sh` starts a runner, enrolls an owner or writes a configuration: see
 [Deployment and migration](#deployment-and-migration).
 
 ## Commands
 
 ```
 ./groundhog.sh init
-./groundhog.sh add <when> <item-id>     # mkdir under schedule/<when>/<item-id>/; you fill the contents
+./groundhog.sh add <when> <item-id> [--from DIR]  # mkdir under schedule/<when>/<item-id>/ (you fill it), or with --from copy a prepared DIR in with one rename
 ./groundhog.sh tick                     # fire any due items into out/
 ./groundhog.sh due                      # what would fire now (read-only)
 ./groundhog.sh list                     # tree-like view of schedule/
@@ -246,6 +239,7 @@ Neither starts a runner, enrolls an owner or writes a configuration: see
 ./groundhog.sh out                      # ls out/
 ./groundhog.sh sweep [days]             # remove out/ entries older than N days (default 14)
 ./groundhog.sh sweep --token-file PATH [days]  # the owner's sweep of an owned instance with a stopped runner
+./groundhog.sh discard --token-file PATH --delivery ID  # the owner discards a pending/no_consumer delivery (stopped runner)
 ./groundhog.sh capabilities --json      # which runtime capabilities this script implements (read-only)
 ./groundhog.sh status --json [--active] # one JSON snapshot of schedule, state and deliveries (read-only); --active counts settled deliveries instead of listing them
 ./groundhog.sh enroll --owner-label LABEL --token-file ABSENT_ABSOLUTE_PATH
@@ -310,9 +304,28 @@ $ ./groundhog.sh release --token-file /private/dir/token    # then delete the to
   consumer admission under any later owner until `recover`.
 * **Standalone `tick`** fails 3 while the instance is owned (ownership wins over
   pause), succeeds without firing while paused, and otherwise ticks as always.
-  `init`, `add`, `drop` and `sweep` also fail 3 while owned (`sweep --token-file`, below,
-  is the owner's own way in). All of them take the mutation lock and fail 4 if it stays
+  `init`, `drop` and `sweep` also fail 3 while owned (`add` does not, below; `sweep --token-file`,
+  below, is the owner's own way in). All of them take the mutation lock and fail 4 if it stays
   busy for about three seconds.
+* **`add` works while owned** (capability `add-while-owned-v1`, accepted on 2026-11-18),
+  for anyone and with no token: adding a schedule item is authoring, not runtime control, and
+  ownership keeps what it guards (the runner, the pause, the deliveries). It takes the mutation
+  lock, so it waits behind a tick in progress (exit 4 if the lock stays busy), and it writes no
+  runtime state: owner, pause and `revision` stay as they were. Plain `add` still makes an empty
+  item directory that you fill afterwards, and a tick between the two steps can fire the item
+  half-made, owned or not. **`add <when> <item-id> --from DIR`** closes that race: it copies the
+  prepared directory `DIR` (which must exist; it is copied, never moved, so it stays) into
+  `runtime/staging/add-<random>` and renames it to `schedule/<when>/<item-id>` under the lock, so
+  a tick sees the item whole or not at all. Prepare the payload, `prompt.md` included, before the
+  call. It runs the checks plain `add` runs (exit 1 for a bad `<when>` or `<item-id>` or an
+  existing item, with nothing staged), prints the new path, and exits 2 for a malformed `--from`
+  (no such directory, given twice, no argument, or extra arguments). Plain `add` rejects extra
+  arguments too: `add <when> <item-id> extra` exits 2 and creates nothing (Bob, 2026-11-18: "Okay,
+  let's reject them"; an older script ignores the extra and makes an empty item). Contents are copied as
+  `cp -R` copies them. A staging directory left by a crash is inert; a later `add` picks a new
+  name. `drop` still fails 3 while owned. An older script reads only the first two arguments of
+  `add` and ignores `--from`, creating an **empty** item and printing its path, so a client finds
+  `add-while-owned-v1` in `capabilities` before it passes `--from` or relies on `add` while owned.
 * Exit codes of the new commands: 0 success, 2 invalid arguments or
   configuration, 3 ownership conflict or stale token, 4 busy, 5 unsupported or
   unusable state, 6 I/O failure, 7 enrollment outcome uncertain.
@@ -373,7 +386,7 @@ between cycles, and every consumer) with `8>&- 9>&-`. Short-lived tools such as
 `ownership-v1`, `runner-v1` and `pause-v1` appear only when the host has: a lock
 helper (util-linux `flock` or perl with `Fcntl`); a SHA-256 tool (`sha256sum`,
 `shasum` or `openssl`); `perl` with `IO::Handle` or `sync(1)` for durable writes;
-`od` and `/dev/urandom`. Without them `capabilities` lists `status-json-v1` and `status-active-v1` only,
+`od` and `/dev/urandom`. Without them `capabilities` lists `status-json-v1`, `status-active-v1`, `next-due-v1` and `add-while-owned-v1` only,
 `enroll`, `run`, `pause`, `resume`, `stop`, `release`, `retry` and `recover` exit
 5 with a message, and every legacy command works as before without taking any
 lock. `consumer-v1`, `delivery-v1` and `release-unresolved-v1` additionally need a way to start a consumer
@@ -677,6 +690,17 @@ makes them exit 4), and both write the record durably before they return.
   outcome stays `unknown`. Recovery invokes nothing. Another unresolved attempt
   keeps the barrier up.
 
+**`discard --delivery ID`** (capability `discard-v1`, accepted on 2026-11-18) lets the token holder dispose of a
+delivery no consumer took: the runner must be stopped (exit 4 while one is alive) and the
+token must match (exit 3; exit 2 for a missing token file or a missing or malformed id; 5 for
+a missing or unreadable record or any state but `pending` with reason `no_consumer`; 6 for an
+I/O failure). It removes the delivery's `out/` entry and records it as `missing` with reason
+`discarded`; nothing is invoked, the fired marker stays (the occurrence does not fire again),
+and the barrier is as it was. Run it again after an interruption and it finishes; on a delivery
+already discarded it changes nothing. Such a record is terminal: `status --json --active`
+counts it in `settled.missing` and `sweep` removes it once old enough. `failed` and
+`uncertain` deliveries are not discarded: retry them, or `recover --decision accept`.
+
 `release` exits 5 while any attempt is unresolved or any record unreadable, unless it
 is given `--leave-unresolved`; that releases and leaves the records and the barrier
 as they are. Each attempt records `owner_label`, the label of the owner that admitted
@@ -726,8 +750,7 @@ things as the sweep above, so pending, failed, in-flight and uncertain deliverie
 stay, and are reported as `skipped`, whatever their age. That includes `pending`
 deliveries with reason `no_consumer`: no consumer has seen them, and removing
 one would erase the only trace of a delivery nobody took. They stay until a
-consumer is configured and takes them, or until the operator removes the entry
-and its record by hand. The sweep writes no state, so ownership, pause and the
+consumer is configured and takes them, or until the owner discards them with `discard`. The sweep writes no state, so ownership, pause and the
 revision stay as they were.
 
 ## Deployment and migration
@@ -768,8 +791,9 @@ you.
 1. **Check the host.** `./groundhog.sh capabilities --json` should list all six
    capabilities (`status-json-v1`, `ownership-v1`, `runner-v1`, `pause-v1`,
    `consumer-v1`, `delivery-v1`), plus `release-unresolved-v1` (the flag for
-   `release`), `status-active-v1` (the flag for `status`) and `sweep-owner-v1`
-   (the flag for `sweep`). Without `consumer-v1` and `delivery-v1` the instance can still be
+   `release`), `status-active-v1` and `next-due-v1` (flags for `status`), `add-while-owned-v1` (`add` on an
+   owned instance, and its `--from` flag), `sweep-owner-v1` (the flag for `sweep`) and `discard-v1`
+   (the `discard` command). Without `consumer-v1` and `delivery-v1` the instance can still be
    owned, paused and run delivery-only.
 2. **Stop whatever else writes to the instance.** Other `tick` loops, cron lines,
    and any process that moves entries out of `out/` (see the next section). An
@@ -834,7 +858,7 @@ records and the pause stay in `runtime/` and are ignored by an older script.
 Replacing `.groundhog/groundhog.sh` (and `README.md`), by hand or with
 `./install.sh <host-dir>`:
 
-* **Does:** swap the script and README; run `init`, which only creates missing
+* **Does:** swap the script, README and `docs/`; run `init`, which only creates missing
   trays.
 * **Does not:** touch `schedule/`, `out/`, `fired/` or anything in `runtime/`;
   enroll, configure, start or stop anything; change an existing owner, pause or
@@ -891,19 +915,20 @@ their behavior, including creating the trays.
 
 ```
 $ ./groundhog.sh capabilities --json
-{"protocol":"groundhog-runtime","protocol_version":1,"implementation_version":"dev","capabilities":["status-json-v1","status-active-v1","ownership-v1","runner-v1","pause-v1","sweep-owner-v1","consumer-v1","delivery-v1","release-unresolved-v1"]}
+{"protocol":"groundhog-runtime","protocol_version":1,"implementation_version":"dev","capabilities":["status-json-v1","status-active-v1","next-due-v1","add-while-owned-v1","ownership-v1","runner-v1","pause-v1","sweep-owner-v1","discard-v1","consumer-v1","delivery-v1","release-unresolved-v1"]}
 ```
 
-`capabilities` lists only what this script implements on this host: `status-json-v1`
-and `status-active-v1` always, `ownership-v1`, `runner-v1` and `pause-v1` where the locking tools
+`capabilities` lists only what this script implements on this host: `status-json-v1`,
+`status-active-v1`, `next-due-v1` and `add-while-owned-v1` always, `ownership-v1`, `runner-v1` and `pause-v1` where the locking tools
 exist (see [Runner, ownership and pause](#runner-ownership-and-pause)), and
-`sweep-owner-v1` with them, and
+`sweep-owner-v1` and `discard-v1` with them, and
 `consumer-v1`, `delivery-v1` and `release-unresolved-v1` where a consumer can also be
 started in a session of its own. A client needs the six capabilities the contract
 names (`status-json-v1`, `ownership-v1` through `delivery-v1`) before it may offer
 supervised control, `release-unresolved-v1` before it passes `--leave-unresolved` to
-`release`, `status-active-v1` before it passes `--active` to `status`, and
-`sweep-owner-v1` before it passes `--token-file` to `sweep`. An older
+`release`, `status-active-v1` before it passes `--active` to `status`, `next-due-v1` before it
+passes `--next-due`, `add-while-owned-v1` before it passes `--from` to `add` or relies on `add` while owned,
+`sweep-owner-v1` before it passes `--token-file` to `sweep`, and `discard-v1` before it runs `discard`. An older
 script answers `capabilities` with its ordinary `unknown command` error (exit 1).
 
 `status --json` follows the projection in the
@@ -932,12 +957,36 @@ script answers `capabilities` with its ordinary `unknown command` error (exit 1)
   `"01-01"`, and once with `date: null` meaning the next tick. The whole object
   is `null` for an item that `tick` would fire but the grammar does not
   recognize. Paused items keep their cadence.
+* `next_due` (capability `next-due-v1`, accepted on 2026-11-18) is an additive field
+  on each schedule record, present only under `status --json --next-due` (which
+  combines with `--active`); without the flag the key is absent and the output and
+  its cost are unchanged. It is the UTC time
+  (`"2026-11-19T07:45:00Z"`) at which the item's next occurrence that has not
+  fired begins, or `null`. It is computed by asking the same `walk_due` that
+  `tick`, `due` and `eligible_now` use about later local moments, so it
+  cannot disagree with `tick`. An item that a tick now would fire reads
+  `observed_at`, whether or not pause or an owner holds it (`firing_allowed`
+  and `blocked_by` say whether it will fire); an unfired past `once` item is
+  such an item. Otherwise it reads when the item's next occurrence begins:
+  its explicit time in local time (a skipped wall-clock time on a
+  spring-forward day reads the moment the clock jumps, a repeated one its
+  first pass), local 00:00 for an item with no time, the start of the next
+  slot for `every/` (00:00 the next day after the last, shorter slot), always
+  with seconds `00`. It is `null` for an item paused by its own or an
+  ancestor's `.paused`, a `once` item that has fired, an item the grammar does
+  not recognize that is not due now, and an item with no occurrence in the
+  next nine years (`yearly/02-30`). The item fires on the first tick at or
+  after `next_due`, not at it: a tick that comes later fires it, and an
+  occurrence that no tick reaches is missed, as under "Missed days", after
+  which `next_due` names the following one. A client passes the flag after finding
+  `next-due-v1` in `capabilities`; a script without it exits 2 on the flag, and
+  clients treat an absent field and `null` alike.
 * `deliveries` lists the records under `runtime/deliveries/` plus, read-only,
   every other directory in `out/` as `origin: "legacy_out"`, state `pending`,
   reason `unregistered`, `id: null`. Status registers nothing. Reasons the
-  runtime writes: `no_consumer` (pending, no config), `path_missing` (missing),
-  `result_not_recorded` and `consumer_detached` (uncertain).
-* `status --json --active` (capability `status-active-v1`, accepted by Bob on
+  runtime writes: `no_consumer` (pending, no config), `path_missing` and `discarded` (missing: its entry vanished, or the owner
+  removed it with `discard`), `result_not_recorded` and `consumer_detached` (uncertain).
+* `status --json --active` (capability `status-active-v1`, accepted on
   2026-11-17) is the same document with the settled deliveries left out of
   `deliveries`: only `pending`, `in_flight`, `failed` and `uncertain` ones (and the
   `legacy_out` entries) are listed, and a new top-level `"settled":

@@ -5,7 +5,7 @@ usage() {
   cat <<'USAGE'
 usage:
   groundhog.sh init
-  groundhog.sh add <when> <item-id>
+  groundhog.sh add <when> <item-id> [--from DIR]
   groundhog.sh tick
   groundhog.sh due
   groundhog.sh list
@@ -24,6 +24,7 @@ usage:
   groundhog.sh release --token-file PATH [--leave-unresolved]
   groundhog.sh retry --token-file PATH --delivery ID
   groundhog.sh recover --token-file PATH --delivery ID --decision retry|accept
+  groundhog.sh discard --token-file PATH --delivery ID
 
 notes:
   - this script operates on the .groundhog/ directory beside it
@@ -42,13 +43,17 @@ notes:
   - item contents are opaque to groundhog
   - capabilities and status are strictly read-only and print one JSON object;
     see README.md and docs/runtime-contract.md
-  - enroll, run, pause, resume, stop, release, retry and recover are the
+  - enroll, run, pause, resume, stop, release, retry, recover and discard are the
     optional runner commands; they need the OS-released locking described in
-    README.md, and an owned instance refuses tick, init, add, drop and sweep
+    README.md, and an owned instance refuses tick, init, drop and sweep
     (sweep --token-file is the owner's own sweep: a stopped runner and a valid token)
+  - add works on an owned instance too, with no token (capability add-while-owned-v1);
+    add --from DIR copies a prepared directory in with one rename under the lock, so
+    no tick sees the item half-made, while plain add leaves an empty directory to fill
   - run hands pending deliveries to the consumer in runtime/config.json, if
     there is one; retry and recover are the operator's decisions about a
-    failed or uncertain handoff (see README.md)
+    failed or uncertain handoff, and discard is the owner's way to dispose of a
+    pending delivery that no consumer took (capability discard-v1; see README.md)
 USAGE
 }
 
@@ -93,12 +98,15 @@ is_ymd() { [[ "$1" =~ ^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$ ]]; }
 # every/ bucket: <N>m or <N>h, N a positive integer with no leading zero.
 is_interval() { [[ "$1" =~ ^[1-9][0-9]*[mh]$ ]]; }
 
-# Selector → minutes-since-midnight. Nonzero exit means "not a time selector."
+# Selector → minutes-since-midnight, in SEL_MINS (no subshell: walk_due asks
+# this for every directory, and status asks walk_due many times). Nonzero exit
+# means "not a time selector."
+SEL_MINS=0
 selector_minutes() {
-  if is_hh "$1"; then echo $((10#$1 * 60)); return 0; fi
+  if is_hh "$1"; then SEL_MINS=$((10#$1 * 60)); return 0; fi
   if is_hm "$1"; then
     local hh="${1%-*}" mm="${1#*-}"
-    echo $((10#$hh * 60 + 10#$mm))
+    SEL_MINS=$((10#$hh * 60 + 10#$mm))
     return 0
   fi
   return 1
@@ -106,7 +114,7 @@ selector_minutes() {
 # Yearly-root variant: HH-MM there would collide with MM-DD shape, so forbid it.
 selector_minutes_hh_only() {
   is_hh "$1" || return 1
-  echo $((10#$1 * 60))
+  SEL_MINS=$((10#$1 * 60))
 }
 
 is_id() {
@@ -193,6 +201,40 @@ validate_when() {
   esac
 }
 
+# civil_days YYYY-MM-DD — CD is the day number (days since 1970-01-01) of a
+# proleptic Gregorian date; civil_date N — CDATE is the date of day number N.
+# Pure arithmetic, no `date`, so a probe of any day costs no process.
+civil_days() {
+  local y=$((10#${1:0:4})) m=$((10#${1:5:2})) d=$((10#${1:8:2})) era yoe doy doe
+  (( m <= 2 )) && y=$((y - 1))
+  era=$(( (y >= 0 ? y : y - 399) / 400 ))
+  yoe=$(( y - era * 400 ))
+  doy=$(( (153 * (m > 2 ? m - 3 : m + 9) + 2) / 5 + d - 1 ))
+  doe=$(( yoe * 365 + yoe / 4 - yoe / 100 + doy ))
+  CD=$(( era * 146097 + doe - 719468 ))
+}
+civil_date() {
+  local z=$(( $1 + 719468 )) era doe yoe y doy mp d m
+  era=$(( (z >= 0 ? z : z - 146096) / 146097 ))
+  doe=$(( z - era * 146097 ))
+  yoe=$(( (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365 ))
+  y=$(( yoe + era * 400 ))
+  doy=$(( doe - (365 * yoe + yoe / 4 - yoe / 100) ))
+  mp=$(( (5 * doy + 2) / 153 ))
+  d=$(( doy - (153 * mp + 2) / 5 + 1 ))
+  m=$(( mp < 10 ? mp + 3 : mp - 9 ))
+  (( m <= 2 )) && y=$((y + 1))
+  printf -v CDATE '%04d-%02d-%02d' "$y" "$m" "$d"
+}
+# civil_fields YYYY-MM-DD — CF_DOW (mon..sun), CF_DOM (1..31), CF_MD (MM-DD).
+civil_fields() {
+  local names=(thu fri sat sun mon tue wed)
+  civil_days "$1"
+  CF_DOW="${names[$(( ((CD % 7) + 7) % 7 ))]}"
+  CF_DOM=$((10#${1:8:2}))
+  CF_MD="${1:5:5}"
+}
+
 now_today() { date +%Y-%m-%d; }
 now_dow()   { date +%a | tr '[:upper:]' '[:lower:]'; }
 now_dom()   { echo $((10#$(date +%d))); }
@@ -207,13 +249,21 @@ now_md()    { date +%m-%d; }
 walk_due() {
   shopt -s nullglob
   local now_t now_d now_dom_v now_hh_v now_mm_v now_md_v now_min_total
-  now_t="$(now_today)"
-  now_d="$(now_dow)"
-  now_dom_v="$(now_dom)"
-  now_hh_v="$(now_hh)"
-  now_mm_v="$(now_mm)"
-  now_md_v="$(now_md)"
-  now_min_total=$(( now_hh_v * 60 + now_mm_v ))
+  if [[ -n "${WD_PROBE_DATE:-}" ]]; then
+    # A probe (status's next_due): the same walk, asked about the local moment
+    # WD_PROBE_DATE (YYYY-MM-DD) at WD_PROBE_MIN minutes after midnight.
+    civil_fields "$WD_PROBE_DATE"
+    now_t="$WD_PROBE_DATE"; now_d="$CF_DOW"; now_dom_v="$CF_DOM"; now_md_v="$CF_MD"
+    now_min_total="$WD_PROBE_MIN"
+  else
+    now_t="$(now_today)"
+    now_d="$(now_dow)"
+    now_dom_v="$(now_dom)"
+    now_hh_v="$(now_hh)"
+    now_mm_v="$(now_mm)"
+    now_md_v="$(now_md)"
+    now_min_total=$(( now_hh_v * 60 + now_mm_v ))
+  fi
 
   # Walks <parent>/* where children are either <time>/<item>/ or <item>/.
   # `time_fn` decides what counts as a time selector and yields minutes-since-midnight
@@ -226,14 +276,15 @@ walk_due() {
     local entry name mins
     for entry in "$parent"/*; do
       [[ -d "$entry" ]] || continue
-      name="$(basename "$entry")"
+      name="${entry##*/}"
       is_paused "$name" && continue
-      if mins=$("$time_fn" "$name"); then
+      if "$time_fn" "$name"; then
+        mins="$SEL_MINS"
         (( now_min_total >= mins )) || continue
         local sub sub_name
         for sub in "$entry"/*; do
           [[ -d "$sub" ]] || continue
-          sub_name="$(basename "$sub")"
+          sub_name="${sub##*/}"
           is_paused "$sub_name" && continue
           printf '%s\t%s\t%s\n' "$sub_name" "$sub" "$is_once"
         done
@@ -255,15 +306,16 @@ walk_due() {
     local entry name mins
     for entry in "$parent"/*; do
       [[ -d "$entry" ]] || continue
-      name="$(basename "$entry")"
+      name="${entry##*/}"
       is_paused "$name" && continue
       "$sub_check" "$name" && continue
-      if mins=$("$time_fn" "$name"); then
+      if "$time_fn" "$name"; then
+        mins="$SEL_MINS"
         (( now_min_total >= mins )) || continue
         local sub sub_name
         for sub in "$entry"/*; do
           [[ -d "$sub" ]] || continue
-          sub_name="$(basename "$sub")"
+          sub_name="${sub##*/}"
           is_paused "$sub_name" && continue
           printf '%s\t%s\t%s\n' "$sub_name" "$sub" "$is_once"
         done
@@ -282,7 +334,7 @@ walk_due() {
     local bucket bucket_name n unit step item item_name slot_min slot_str
     for bucket in "$SCHED/every"/*; do
       [[ -d "$bucket" ]] || continue
-      bucket_name="$(basename "$bucket")"
+      bucket_name="${bucket##*/}"
       is_paused "$bucket_name" && continue
       is_interval "$bucket_name" || continue   # lint flags; walker skips
       n="${bucket_name%[mh]}"
@@ -293,7 +345,7 @@ walk_due() {
       printf -v slot_str '%02d-%02d' $((slot_min/60)) $((slot_min%60))
       for item in "$bucket"/*; do
         [[ -d "$item" ]] || continue
-        item_name="$(basename "$item")"
+        item_name="${item##*/}"
         is_paused "$item_name" && continue
         printf '%s\t%s\t%s\t%s\n' "$item_name" "$item" "0" "$slot_str"
       done
@@ -305,12 +357,12 @@ walk_due() {
     local parent="$1" entry name sub sub_name
     for entry in "$parent"/*; do
       [[ -d "$entry" ]] || continue
-      name="$(basename "$entry")"
+      name="${entry##*/}"
       is_paused "$name" && continue
       if is_hh "$name" || is_hm "$name"; then
         for sub in "$entry"/*; do
           [[ -d "$sub" ]] || continue
-          sub_name="$(basename "$sub")"
+          sub_name="${sub##*/}"
           is_paused "$sub_name" && continue
           printf '%s\t%s\t1\n' "$sub_name" "$sub"
         done
@@ -341,7 +393,7 @@ walk_due() {
     local date_dir d
     for date_dir in "$SCHED/once"/*; do
       [[ -d "$date_dir" ]] || continue
-      d="$(basename "$date_dir")"
+      d="${date_dir##*/}"
       is_paused "$d" && continue
       is_ymd "$d" || continue
       if [[ "$d" > "$now_t" ]]; then
@@ -370,6 +422,18 @@ cmd_init() {
 
 cmd_add() {
   require_root
+  local from=""
+  if (( $# > 2 )); then
+    # More than <when> <item-id>: only the exact pair `--from DIR` is valid.
+    # An older script ignores the extras and would make an empty item.
+    if (( $# != 4 )) || [[ "$3" != --from ]]; then
+      rt_die 2 "add: expected <when> <item-id> [--from DIR]"
+    fi
+    from="$4"
+    rt_paths
+    add_from "$1" "$2" "$from"
+    return
+  fi
   passive_enter add
   ensure_dirs
   local when="${1:-}"
@@ -388,18 +452,69 @@ cmd_add() {
   echo "$path"
 }
 
+ADD_STAGE=""
+add_cleanup() {
+  [[ -z "$ADD_STAGE" ]] || rm -rf -- "$ADD_STAGE"
+}
+
+# add_from WHEN ID DIR — `add <when> <item-id> --from DIR`: copy the prepared
+# directory DIR next to the schedule (runtime/staging/add-*), then rename it to
+# schedule/<when>/<id> under the mutation lock, so a tick sees the item whole or
+# not at all. The checks plain add makes run first, and DIR is copied, never moved.
+add_from() {
+  local when="$1" id="$2" dir="$3" real path n=0
+  [[ -n "$when" ]] || rt_die 1 "add requires <when> and <item-id>"
+  [[ -n "$id" ]]   || rt_die 1 "add requires <item-id>"
+  when="${when%/}"
+  validate_when "$when"
+  is_id "$id" || die "invalid item id '$id' (use letters, digits, ., _, -; cannot collide with axis tokens or date/hour shapes)"
+  path="$SCHED/$when/$id"
+  [[ ! -e "$path" ]] || die "item already exists: $path"
+  [[ -n "$dir" && -d "$dir" ]] || rt_die 2 "add: --from needs an existing directory"
+  real="$(cd -- "$dir" 2>/dev/null && pwd -P)" || rt_die 2 "add: cannot read the --from directory"
+
+  mkdir -p "$RT_DIR/staging" 2>/dev/null || rt_die 6 "add: cannot create $RT_DIR/staging"
+  trap add_cleanup EXIT
+  while :; do
+    ADD_STAGE="$RT_DIR/staging/add-$$-$RANDOM$RANDOM"
+    [[ -e "$ADD_STAGE" || -L "$ADD_STAGE" ]] || break
+    n=$((n + 1))
+    (( n < 20 )) || { ADD_STAGE=""; rt_die 6 "add: cannot name a staging directory"; }
+  done
+  cp -R -- "$real" "$ADD_STAGE" 2>/dev/null || rt_die 6 "add: cannot copy $dir"
+
+  passive_enter add
+  ensure_dirs
+  # Checked again under the lock: another add may have landed since.
+  [[ ! -e "$path" && ! -L "$path" ]] || die "item already exists: $path"
+  mkdir -p "$SCHED/$when" 2>/dev/null || rt_die 6 "add: cannot create $SCHED/$when"
+  mv -- "$ADD_STAGE" "$path" 2>/dev/null || rt_die 6 "add: cannot move the item into place"
+  ADD_STAGE=""
+  LINT_INCLUDE_PAUSED=0
+  lint_scan
+  note_shared_names "$id"
+  echo "$path"
+}
+
 # Translate a source schedule path into its fired-marker path.
 # The marker mirrors the schedule subtree, so two distinct items
 # with the same name (e.g. weekly/sat/foo and monthly/25/foo) get
 # distinct markers and neither is silently swallowed.
-fired_marker_for() {
+# fired_marker_set SRC DATE [SLOT] puts that path in FMARK without a subshell;
+# fired_marker_for prints it.
+FMARK=""
+fired_marker_set() {
   local src="$1" now_t="$2" slot="${3:-}"
   local rel="${src#"$SCHED"/}"
   if [[ -n "$slot" ]]; then
-    printf '%s/%s/%s/%s\n' "$FIRED" "$now_t" "$rel" "$slot"
+    FMARK="$FIRED/$now_t/$rel/$slot"
   else
-    printf '%s/%s/%s\n' "$FIRED" "$now_t" "$rel"
+    FMARK="$FIRED/$now_t/$rel"
   fi
+}
+fired_marker_for() {
+  fired_marker_set "$@"
+  printf '%s\n' "$FMARK"
 }
 
 cmd_due() {
@@ -921,13 +1036,15 @@ GH_PROTOCOL="groundhog-runtime"
 GH_PROTOCOL_VERSION=1
 # Informational only; clients must not branch on it.
 GH_IMPLEMENTATION_VERSION="dev"
-# Advertise only what this script implements here. cmd_capabilities adds
-# ownership-v1, runner-v1, pause-v1 and sweep-owner-v1 (sweep --token-file) on
+# Advertise only what this script implements here (add-while-owned-v1 needs
+# nothing from the host). cmd_capabilities adds
+# ownership-v1, runner-v1, pause-v1, sweep-owner-v1 (sweep --token-file) and
+# discard-v1 (discard --token-file) on
 # hosts where rt_detect finds the locking
 # and durability tools, and consumer-v1, delivery-v1 and release-unresolved-v1
 # (release --leave-unresolved) where it also finds a way to start a consumer in
 # its own session.
-GH_CAPABILITIES=("status-json-v1" "status-active-v1")
+GH_CAPABILITIES=("status-json-v1" "status-active-v1" "next-due-v1" "add-while-owned-v1")
 
 JSON_LOSSY=0        # set when json_str had to replace bytes that are not UTF-8
 JSTR=""
@@ -1665,6 +1782,7 @@ delivery_collision_diags() {
 LIVE_IDS=""      # US-delimited ids listed from deliveries/ (a record the runner files meanwhile is not listed twice)
 LIVE_FILES=""    # status --active: US-delimited file names listed from deliveries/
 STATUS_ACTIVE=0  # status --active: settled deliveries are counted, not listed
+STATUS_NEXT_DUE=0  # status --next-due: each schedule record gains next_due
 SETTLED_ACCEPTED=0; SETTLED_MISSING=0
 
 # status_list_or_count STATE — the record whose JSON is JR joins DELIVERIES, or
@@ -1840,11 +1958,254 @@ cadence_json() {
   JR="{$out,\"defaulted\":$defaulted}"
 }
 
+# --- next_due ---------------------------------------------------------------
+# next_due asks the script's own walk_due, not a second scheduler, when an item
+# next becomes due. walk_due can be probed at any local moment (WD_PROBE_DATE,
+# WD_PROBE_MIN); an item's next occurrence is the earliest probe at which
+# walk_due emits it under a fired-marker key (date, slot) that does not exist.
+# Callers read the probe through nd_probe, and the answer reads as UTC.
+
+NOW_EPOCH_FLAVOUR=""
+# nd_date_gnu — true when `date` takes -d @EPOCH (GNU); else BSD -r EPOCH.
+nd_date_gnu() {
+  if [[ -z "$NOW_EPOCH_FLAVOUR" ]]; then
+    if date -d @0 >/dev/null 2>&1; then NOW_EPOCH_FLAVOUR=gnu; else NOW_EPOCH_FLAVOUR=bsd; fi
+  fi
+  [[ "$NOW_EPOCH_FLAVOUR" == gnu ]]
+}
+
+# nd_fields_of EPOCH — EF_DATE, EF_MIN (minutes after local midnight), EF_OFF
+# (UTC offset in seconds): the local view of an instant.
+nd_fields_of() {
+  local out hh mm z sign
+  if nd_date_gnu; then out="$(date -d "@$1" '+%Y-%m-%d %H %M %z')"; else out="$(date -r "$1" '+%Y-%m-%d %H %M %z')"; fi
+  read -r EF_DATE hh mm z <<< "$out"
+  EF_MIN=$(( 10#$hh * 60 + 10#$mm ))
+  sign=1; [[ "${z:0:1}" == - ]] && sign=-1
+  EF_OFF=$(( sign * (10#${z:1:2} * 3600 + 10#${z:3:2} * 60) ))
+}
+
+# nd_off_noon DATE — NDO is the UTC offset (seconds) at about local noon of DATE.
+# Each date costs one `date`; answers are kept for the run.
+OC_KEY=()
+OC_VAL=()
+nd_off_noon() {
+  local i
+  for (( i = 0; i < ${#OC_KEY[@]}; i++ )); do
+    if [[ "${OC_KEY[i]}" == "$1" ]]; then NDO="${OC_VAL[i]}"; return 0; fi
+  done
+  civil_days "$1"
+  nd_fields_of $(( CD * 86400 + 43200 - ND_OFFREF ))
+  NDO="$EF_OFF"
+  OC_KEY+=("$1"); OC_VAL+=("$NDO")
+}
+
+# nd_utc EPOCH — NDU is the UTC time as YYYY-MM-DDTHH:MM:SSZ, by arithmetic.
+nd_utc() {
+  local days=$(( $1 / 86400 )) rem=$(( $1 % 86400 ))
+  civil_date "$days"
+  printf -v NDU '%sT%02d:%02d:%02dZ' "$CDATE" $(( rem / 3600 )) $(( rem % 3600 / 60 )) $(( rem % 60 ))
+}
+
+# nd_local_start DATE MIN — ND_EPOCH is the first instant on local DATE whose
+# local time is at or after minute MIN (the "at or after" threshold of the
+# README), so a skipped wall-clock time (spring forward) gives the instant the
+# clock jumps and a repeated one (fall back) gives its first pass.
+nd_local_start() {
+  local d="$1" m="$2" hh mm out e e2 off0 tries=0 o1 o2
+  # Quick path, for the common day: when the UTC offset is the same at noon the
+  # day before and noon the day after, no clock change falls on this day (they
+  # come months apart), and the instant is plain arithmetic.
+  civil_days "$d"; local base=$(( CD * 86400 + m * 60 ))
+  civil_date $(( CD - 1 )); nd_off_noon "$CDATE"; o1="$NDO"
+  civil_date $(( CD + 1 )); nd_off_noon "$CDATE"; o2="$NDO"
+  if (( o1 == o2 )); then ND_EPOCH=$(( base - o1 )); return 0; fi
+  printf -v hh '%02d' $(( m / 60 )); printf -v mm '%02d' $(( m % 60 ))
+  if nd_date_gnu; then
+    out="$(date -d "$d $hh:$mm:00" +%s 2>/dev/null)" || out=""
+  else
+    out="$(date -j -f '%Y-%m-%d %H:%M:%S' "$d $hh:$mm:00" +%s 2>/dev/null)" || out=""
+  fi
+  if [[ -z "$out" ]]; then
+    # A time that does not exist here: start from noon, which always does.
+    if nd_date_gnu; then out="$(date -d "$d 12:00:00" +%s)"; else out="$(date -j -f '%Y-%m-%d %H:%M:%S' "$d 12:00:00" +%s)"; fi
+    out=$(( out - (720 - m) * 60 ))
+  fi
+  e="$out"
+  nd_fields_of "$e"
+  # Settle on the first instant that reads at or after (d, m).
+  while [[ "$EF_DATE" < "$d" || ( "$EF_DATE" == "$d" && $EF_MIN -lt $m ) ]]; do
+    (( ++tries > 130 )) && break
+    e=$(( e + 60 )); nd_fields_of "$e"
+  done
+  while (( tries++ < 260 )); do
+    nd_fields_of $(( e - 60 ))
+    [[ "$EF_DATE" > "$d" || ( "$EF_DATE" == "$d" && $EF_MIN -ge $m ) ]] || break
+    e=$(( e - 60 ))
+  done
+  # A repeated hour (fall back): the same reading came a UTC-offset change
+  # earlier, and the first pass is the one a tick would have seen.
+  nd_fields_of "$e"; off0="$EF_OFF"
+  nd_fields_of $(( e - 86400 ))
+  if (( EF_OFF != off0 )); then
+    e2=$(( e + off0 - EF_OFF ))
+    nd_fields_of "$e2"
+    if [[ "$EF_DATE" == "$d" ]] && (( EF_MIN >= m && e2 < e )); then
+      nd_fields_of $(( e2 - 60 ))
+      [[ "$EF_DATE" < "$d" || ( "$EF_DATE" == "$d" && $EF_MIN -lt $m ) ]] && e="$e2"
+    fi
+  fi
+  ND_EPOCH="$e"
+}
+
+# nd_probe DATE MIN — walk_due's rows at that local moment are PR_ROWS[PR_FROM
+# .. PR_TO-1]. Answers are kept for the run: items share most of their probes.
+PR_ROWS=()
+PR_FROM=0
+PR_TO=0
+PC_KEY=()
+PC_FROM=()
+PC_TO=()
+nd_probe() {
+  local key="$1 $2" i text
+  local rows=()
+  for (( i = 0; i < ${#PC_KEY[@]}; i++ )); do
+    if [[ "${PC_KEY[i]}" == "$key" ]]; then PR_FROM="${PC_FROM[i]}"; PR_TO="${PC_TO[i]}"; return 0; fi
+  done
+  WD_PROBE_DATE="$1"; WD_PROBE_MIN="$2"
+  text="$(walk_due)"
+  WD_PROBE_DATE=""; WD_PROBE_MIN=""
+  PR_FROM=${#PR_ROWS[@]}
+  if [[ -n "$text" ]]; then
+    IFS=$'\n' read -r -d '' -a rows <<< "$text" || true
+    PR_ROWS+=("${rows[@]}")
+  fi
+  PR_TO=${#PR_ROWS[@]}
+  PC_KEY+=("$key"); PC_FROM+=("$PR_FROM"); PC_TO+=("$PR_TO")
+}
+
+# nd_has ITEM_PATH DATE — true when the last probe emitted the item and the
+# fired marker its (date, slot) would have does not exist: the item would fire.
+nd_has() {
+  local p="$1" j row rest slot
+  for (( j = PR_FROM; j < PR_TO; j++ )); do
+    row="${PR_ROWS[j]}"
+    [[ "$row" == *$'\t'"$p"$'\t'* ]] || continue
+    rest="${row#*$'\t'"$p"$'\t'}"       # <is-once>[<TAB><slot>]
+    slot=""
+    [[ "$rest" == *$'\t'* ]] && slot="${rest#*$'\t'}"
+    fired_marker_set "$p" "$2" "$slot"
+    [[ ! -e "$FMARK" ]]
+    return
+  done
+  return 1
+}
+
+# nd_at ITEM DATE MIN — probe, then nd_has.
+nd_at() {
+  nd_probe "$2" "$3"
+  nd_has "${item_paths[$1]}" "$2"
+}
+
+# nd_try ITEM DATE — if the item would fire on DATE, at or after now when DATE
+# is today, set ND_UTC[ITEM] to the start of that occurrence and succeed. The
+# start is the least minute at which walk_due emits the item under a marker
+# that does not exist; that stays emitted once it starts (a threshold, or an
+# every/ slot), so it can be bisected. The cadence's own time is only the
+# first guess, to save probes.
+nd_try() {
+  local i="$1" d="$2" lo=0 hi=1439 t=0 cad="${item_cads[$1]}" mid
+  [[ "$d" == "$ND_TODAY" ]] && lo=$(( ND_NOWMIN + 1 ))
+  (( lo <= hi )) || return 1
+  nd_at "$i" "$d" "$hi" || return 1
+  if [[ "$cad" == *"${US}time="* ]]; then
+    t="${cad##*"${US}time="}"; t="${t%%"$US"*}"
+    selector_minutes "$t" && t="$SEL_MINS" || t=0
+  fi
+  (( t < lo )) && t="$lo"
+  (( t > hi )) && t="$hi"
+  if nd_at "$i" "$d" "$t"; then
+    # The guess holds: it is the start unless the item already held a minute earlier.
+    if (( t == lo )) || ! nd_at "$i" "$d" $(( t - 1 )); then lo="$t"; hi="$t"; else hi=$(( t - 1 )); fi
+  else
+    lo=$(( t + 1 ))
+  fi
+  while (( lo < hi )); do
+    mid=$(( (lo + hi) / 2 ))
+    if nd_at "$i" "$d" "$mid"; then hi="$mid"; else lo=$(( mid + 1 )); fi
+  done
+  nd_local_start "$d" "$lo"
+  nd_utc "$ND_EPOCH"
+  ND_UTC[i]="$NDU"
+}
+
+# nd_resolve IDX… — fill ND_UTC for the items whose next occurrence has not
+# fired. walk_due decides every answer; the cadence only proposes which days
+# to ask about (an item's own day of week, day of month or date, so a yearly
+# item costs a few probes, not a scan of the year), and an item the grammar
+# does not recognize proposes none.
+nd_resolve() {
+  local i cad part axis dow dom md ymd day y mo d cd0 cdy
+  local hh mm z sign
+  read -r ND_TODAY hh mm z <<< "$(date '+%Y-%m-%d %H %M %z')"
+  ND_NOWMIN=$(( 10#$hh * 60 + 10#$mm ))
+  sign=1; [[ "${z:0:1}" == - ]] && sign=-1
+  ND_OFFREF=$(( sign * (10#${z:1:2} * 3600 + 10#${z:3:2} * 60) ))
+  civil_days "$ND_TODAY"; cd0="$CD"
+  for i in "$@"; do
+    cad="${item_cads[i]}"
+    axis=""; dow=""; dom=""; md=""; ymd=""
+    local parts=()
+    IFS="$US" read -r -a parts <<< "$cad"
+    for part in ${parts[@]+"${parts[@]}"}; do
+      case "$part" in
+        axis=*) axis="${part#axis=}" ;; dow=*) dow="${part#dow=}" ;;
+        dom=*) dom="${part#dom=}" ;; md=*) md="${part#md=}" ;; ymd=*) ymd="${part#ymd=}" ;;
+      esac
+    done
+    case "$axis" in
+      daily|every)
+        for (( day = 0; day <= 1; day++ )); do
+          civil_date $(( cd0 + day ))
+          nd_try "$i" "$CDATE" && break
+        done ;;
+      weekly)
+        [[ -n "$dow" ]] || dow=mon
+        for (( day = 0; day <= 7; day++ )); do
+          civil_date $(( cd0 + day )); d="$CDATE"
+          civil_fields "$d"
+          [[ "$CF_DOW" == "$dow" ]] || continue
+          nd_try "$i" "$d" && break
+        done ;;
+      monthly)
+        [[ -n "$dom" ]] || dom=1
+        y="${ND_TODAY:0:4}"; mo=$(( 10#${ND_TODAY:5:2} ))
+        for (( day = 0; day < 15; day++ )); do
+          printf -v d '%04d-%02d-%02d' "$y" "$mo" "$dom"
+          civil_days "$d"; civil_date "$CD"
+          if [[ "$CDATE" == "$d" && ! "$d" < "$ND_TODAY" ]]; then nd_try "$i" "$d" && break; fi
+          if (( ++mo > 12 )); then mo=1; y=$(( y + 1 )); fi
+        done ;;
+      yearly)
+        [[ -n "$md" ]] || md=01-01
+        for (( y = ${ND_TODAY:0:4}; y <= ${ND_TODAY:0:4} + 8; y++ )); do
+          d="$y-$md"
+          civil_days "$d"; civil_date "$CD"
+          [[ "$CDATE" == "$d" && ! "$d" < "$ND_TODAY" ]] || continue   # 02-30, or 02-29 in a common year
+          nd_try "$i" "$d" && break
+        done ;;
+      once)
+        [[ -z "$ymd" || "$ymd" < "$ND_TODAY" ]] || nd_try "$i" "$ymd" ;;
+    esac
+  done
+}
+
 inspect_schedule() {
   local now_t due_text name src is_once slot k p rel marker marker_rel due_idx i
   local paused_list part paused_json bb fired eligible allowed marker_json
-  local item_paths=() item_pauses=() due_src=() due_slot=() found o
-  local parts=() item_cads=() cad_json
+  local item_paths=() item_pauses=() due_src=() due_slot=() due_once=() found o
+  local parts=() item_cads=() cad_json nd_json nd_part nd_pending=()
+  ND_UTC=(); PR_ROWS=(); PC_KEY=(); PC_FROM=(); PC_TO=(); OC_KEY=(); OC_VAL=()
   now_t="$(now_today)"
 
   LINT_INCLUDE_PAUSED=1
@@ -1867,6 +2228,7 @@ inspect_schedule() {
     [[ "$src" == "$SCHED"/* && -d "$src" ]] || continue
     due_src+=("$src")
     due_slot+=("$slot")
+    due_once+=("$is_once")
     found=0
     for p in ${item_paths[@]+"${item_paths[@]}"}; do
       [[ "$p" == "$src" ]] && { found=1; break; }
@@ -1923,11 +2285,32 @@ inspect_schedule() {
     allowed=false
     [[ -z "$bb" ]] && allowed=true
 
+    # next_due, only under status --next-due: null for a paused item and for
+    # a once item that has fired; the observed time for an item that would
+    # fire on a tick now; the rest are asked of walk_due below.
+    nd_part=""
+    if (( STATUS_NEXT_DUE )); then
+      nd_json=null
+      if [[ -n "${item_pauses[k]}" ]]; then :
+      elif [[ "$eligible" == true ]]; then json_str "$OBSERVED_AT"; nd_json="$JSTR"
+      elif [[ "$fired" == true && "${due_once[due_idx]}" == 1 ]]; then :
+      else nd_pending+=("$k"); nd_json="@$k@"
+      fi
+      nd_part=",\"next_due\":$nd_json"
+    fi
+
     cadence_json "${item_cads[k]}"; cad_json="$JR"
     json_str "$rel"; local path_json="$JSTR"
     json_str "${p##*/}"; local id_json="$JSTR"
-    SCHEDULE+=("{\"path\":$path_json,\"item_id\":$id_json,\"cadence\":$cad_json,\"paused_by\":[$paused_json],\"eligible_now\":$eligible,\"fired_marker\":$marker_json,\"fired\":$fired,\"firing_allowed\":$allowed,\"blocked_by\":[$bb]}")
+    SCHEDULE+=("{\"path\":$path_json,\"item_id\":$id_json,\"cadence\":$cad_json,\"paused_by\":[$paused_json],\"eligible_now\":$eligible,\"fired_marker\":$marker_json,\"fired\":$fired,\"firing_allowed\":$allowed,\"blocked_by\":[$bb]$nd_part}")
   done
+  if (( ${#nd_pending[@]} > 0 )); then
+    nd_resolve "${nd_pending[@]}"
+    for k in "${nd_pending[@]}"; do
+      if [[ -n "${ND_UTC[k]:-}" ]]; then json_str "${ND_UTC[k]}"; nd_json="$JSTR"; else nd_json=null; fi
+      SCHEDULE[k]="${SCHEDULE[k]%@$k@\}}$nd_json}"
+    done
+  fi
   LINT_INCLUDE_PAUSED=0
 }
 
@@ -1964,7 +2347,7 @@ cmd_capabilities() {
   local caps="" c
   rt_detect
   if [[ -z "$GH_RT_MISSING" ]]; then
-    GH_CAPABILITIES+=("ownership-v1" "runner-v1" "pause-v1" "sweep-owner-v1")
+    GH_CAPABILITIES+=("ownership-v1" "runner-v1" "pause-v1" "sweep-owner-v1" "discard-v1")
     if [[ -n "$GH_ISOLATE" ]]; then
       GH_CAPABILITIES+=("consumer-v1" "delivery-v1" "release-unresolved-v1")
     fi
@@ -2009,12 +2392,16 @@ jgen_peek() {
 
 cmd_status() {
   # status takes --json, and --active (status-active-v1) beside it: settled
-  # deliveries are counted instead of listed.
-  local arg rest=() seen_active=0
+  # deliveries are counted instead of listed; and --next-due (next-due-v1):
+  # each schedule record gains next_due.
+  local arg rest=() seen_active=0 seen_nd=0
   for arg in "$@"; do
     if [[ "$arg" == --active ]]; then
       if (( seen_active )); then echo "error: status: --active given more than once" >&2; exit 2; fi
       seen_active=1; STATUS_ACTIVE=1
+    elif [[ "$arg" == --next-due ]]; then
+      if (( seen_nd )); then echo "error: status: --next-due given more than once" >&2; exit 2; fi
+      seen_nd=1; STATUS_NEXT_DUE=1
     else
       rest+=("$arg")
     fi
@@ -2425,8 +2812,9 @@ parse_opts() {
 # --- passive callers ---------------------------------------------------------
 # passive_enter CMD — for tick, init, add, drop and sweep. Where locking exists:
 # take the mutation lock (held until this process exits), refuse while the
-# instance is owned (exit 3) or its state is unusable (exit 5), and note the
-# global pause for tick. Without locking the legacy behavior is unchanged.
+# instance is owned (exit 3, except for add, which works on an owned instance)
+# or its state is unusable (exit 5), and note the global pause for tick.
+# Without locking the legacy behavior is unchanged.
 passive_enter() {
   rt_paths
   rt_detect
@@ -2434,8 +2822,8 @@ passive_enter() {
   mkdir -p "$RT_LOCKS" 2>/dev/null || rt_die 6 "$1: cannot create $RT_LOCKS"
   lock_mutation_or_die "$1"
   rt_load || rt_die 5 "$1: $RT_ERR"
-  if (( S_OWNER_PRESENT )); then
-    rt_die 3 "$1: this instance is owned; its runner ticks under the owner's token, and v1 has no supervised schedule edit"
+  if (( S_OWNER_PRESENT )) && [[ "$1" != add ]]; then
+    rt_die 3 "$1: this instance is owned; its runner ticks under the owner's token, and v1 has no supervised schedule edit other than add"
   fi
   PASSIVE_PAUSED="$S_PAUSED"
 }
@@ -4105,6 +4493,44 @@ cmd_recover() {
   fi
 }
 
+# cmd_discard — `discard --token-file PATH --delivery ID` (capability discard-v1):
+# dispose of a pending delivery that no consumer took. Same rules as retry and
+# recover (stopped runner, token under the mutation lock). Only `pending` with
+# reason no_consumer is discarded: the out/ entry goes first, then the record is
+# written durably as missing/discarded, so a crash between the two leaves a
+# pending record whose path is gone, which the next run records as path_missing
+# and a repeated discard records as discarded. The fired marker, the attempts and
+# the handoff barrier are not touched, and nothing is invoked.
+cmd_discard() {
+  parse_opts discard token-file delivery -- "$@"
+  delivery_control discard
+  case "$D_STATE" in
+    missing)
+      if [[ "$D_REASON" == discarded ]]; then
+        unlock_mutation
+        echo "delivery $D_ID is already discarded"
+        return 0
+      fi
+      rt_die 5 "discard: delivery $D_ID is missing ($D_REASON); only a pending delivery with reason no_consumer can be discarded"
+      ;;
+    pending)
+      [[ "$D_REASON" == no_consumer ]] || rt_die 5 "discard: delivery $D_ID is pending with reason '${D_REASON:-none}'; only a pending delivery with reason no_consumer can be discarded"
+      ;;
+    *)
+      rt_die 5 "discard: delivery $D_ID is $D_STATE; only a pending delivery with reason no_consumer can be discarded"
+      ;;
+  esac
+  # D_PATH is out/<name> (drec_load checks the shape). rm removes a symlink, never follows it.
+  rm -rf -- "${GH_DIR:?}/$D_PATH" 2>/dev/null || true
+  if [[ -e "$GH_DIR/$D_PATH" || -L "$GH_DIR/$D_PATH" ]]; then
+    rt_die 6 "discard: could not remove $D_PATH; the record of delivery $D_ID was not changed"
+  fi
+  D_STATE=missing; D_REASON=discarded
+  delivery_save_or_die discard
+  unlock_mutation
+  echo "discarded: $D_PATH is removed and delivery $D_ID is recorded as missing (discarded); no consumer was invoked"
+}
+
 # --- the runner --------------------------------------------------------------
 RUNNER_ID=""
 RUNNER_RECORDED=0
@@ -4384,6 +4810,7 @@ main() {
     release) shift; cmd_release "$@" ;;
     retry)   shift; cmd_retry   "$@" ;;
     recover) shift; cmd_recover "$@" ;;
+    discard) shift; cmd_discard "$@" ;;
     -h|--help|help|"") usage ;;
     *) die "unknown command '$cmd'" ;;
   esac
