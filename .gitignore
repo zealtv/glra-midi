@@ -1,5 +1,6 @@
 .groundhog/out/
 .groundhog/fired/
+.groundhog/runtime/
 .DS_Store
 .venv/
 __pycache__/
