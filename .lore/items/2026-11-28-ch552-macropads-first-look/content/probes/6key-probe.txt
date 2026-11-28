@@ -1,0 +1,111 @@
+# 6-key probe, 2026-11-28 19:51, read-only (enumeration cache, GET_DESCRIPTOR, GET_STRING)
+0x1 0x2 if 3
+0x1 0x1 if 3
+0x1 0x6 if 2
+0xc 0x1 if 2
+0x1 0x6 if 0
+DEVICE ID 1189:8890 on Bus 000 Address 004 =================
+ bLength                :   0x12 (18 bytes)
+ bDescriptorType        :    0x1 Device
+ bcdUSB                 :  0x110 USB 1.1
+ bDeviceClass           :    0x0 Specified at interface
+ bDeviceSubClass        :    0x0
+ bDeviceProtocol        :    0x0
+ bMaxPacketSize0        :    0x8 (8 bytes)
+ idVendor               : 0x1189
+ idProduct              : 0x8890
+ bcdDevice              :    0x0 Device 0.0
+ iManufacturer          :    0x0 
+ iProduct               :    0x0 
+ iSerialNumber          :    0x0 
+ bNumConfigurations     :    0x1
+  CONFIGURATION 1: 100 mA ==================================
+   bLength              :    0x9 (9 bytes)
+   bDescriptorType      :    0x2 Configuration
+   wTotalLength         :   0x6d (109 bytes)
+   bNumInterfaces       :    0x4
+   bConfigurationValue  :    0x1
+   iConfiguration       :    0x0 
+   bmAttributes         :   0xa0 Bus Powered, Remote Wakeup
+   bMaxPower            :   0x32 (100 mA)
+    INTERFACE 0: Human Interface Device ====================
+     bLength            :    0x9 (9 bytes)
+     bDescriptorType    :    0x4 Interface
+     bInterfaceNumber   :    0x0
+     bAlternateSetting  :    0x0
+     bNumEndpoints      :    0x1
+     bInterfaceClass    :    0x3 Human Interface Device
+     bInterfaceSubClass :    0x1
+     bInterfaceProtocol :    0x1
+     iInterface         :    0x0 
+      ENDPOINT 0x81: Interrupt IN ==========================
+       bLength          :    0x7 (7 bytes)
+       bDescriptorType  :    0x5 Endpoint
+       bEndpointAddress :   0x81 IN
+       bmAttributes     :    0x3 Interrupt
+       wMaxPacketSize   :   0x40 (64 bytes)
+       bInterval        :    0xa
+    INTERFACE 1: Human Interface Device ====================
+     bLength            :    0x9 (9 bytes)
+     bDescriptorType    :    0x4 Interface
+     bInterfaceNumber   :    0x1
+     bAlternateSetting  :    0x0
+     bNumEndpoints      :    0x1
+     bInterfaceClass    :    0x3 Human Interface Device
+     bInterfaceSubClass :    0x0
+     bInterfaceProtocol :    0x0
+     iInterface         :    0x0 
+      ENDPOINT 0x2: Interrupt OUT ==========================
+       bLength          :    0x7 (7 bytes)
+       bDescriptorType  :    0x5 Endpoint
+       bEndpointAddress :    0x2 OUT
+       bmAttributes     :    0x3 Interrupt
+       wMaxPacketSize   :   0x40 (64 bytes)
+       bInterval        :    0xa
+    INTERFACE 2: Human Interface Device ====================
+     bLength            :    0x9 (9 bytes)
+     bDescriptorType    :    0x4 Interface
+     bInterfaceNumber   :    0x2
+     bAlternateSetting  :    0x0
+     bNumEndpoints      :    0x1
+     bInterfaceClass    :    0x3 Human Interface Device
+     bInterfaceSubClass :    0x0
+     bInterfaceProtocol :    0x0
+     iInterface         :    0x0 
+      ENDPOINT 0x83: Interrupt IN ==========================
+       bLength          :    0x7 (7 bytes)
+       bDescriptorType  :    0x5 Endpoint
+       bEndpointAddress :   0x83 IN
+       bmAttributes     :    0x3 Interrupt
+       wMaxPacketSize   :    0x4 (4 bytes)
+       bInterval        :    0xa
+    INTERFACE 3: Human Interface Device ====================
+     bLength            :    0x9 (9 bytes)
+     bDescriptorType    :    0x4 Interface
+     bInterfaceNumber   :    0x3
+     bAlternateSetting  :    0x0
+     bNumEndpoints      :    0x1
+     bInterfaceClass    :    0x3 Human Interface Device
+     bInterfaceSubClass :    0x1
+     bInterfaceProtocol :    0x2
+     iInterface         :    0x0 
+      ENDPOINT 0x82: Interrupt IN ==========================
+       bLength          :    0x7 (7 bytes)
+       bDescriptorType  :    0x5 Endpoint
+       bEndpointAddress :   0x82 IN
+       bmAttributes     :    0x3 Interrupt
+       wMaxPacketSize   :    0x4 (4 bytes)
+       bInterval        :    0xa
+string 1 'wch.cn'
+string 2 'CH559'
+string 3 'key552'
+string 4 'Љ'
+string 5 '匡✒选㈁ᓠ'
+if 0 report desc err [Errno 13] Access denied (insufficient permissions)
+if 1 report desc 0600ff0901a1018503090215002600ff750895408106090215002600ff750895409106c0
+if 2 report desc err [Errno 13] Access denied (insufficient permissions)
+if 3 report desc err [Errno 13] Access denied (insufficient permissions)
+## macOS IOHIDInterface report descriptors
+  |   "ReportDescriptor" = <05010906a1018501050719e029e7150025017501950881029501750881019503750105081901290391029505750191019506750826ff000507190029918100c0>
+  |   "ReportDescriptor" = <05010906a1018501050719e029e71500250175019508810295017508810395087501050819012905910295097508150025ff0507190029ff8100c0050c0901a10185029501751016000026ff021a00002aff028100c0>
+  |   "ReportDescriptor" = <05010902a1010901a1000509190129031500250175019503810275059501810105010930093109381581257f750895038106c0c0>
